@@ -50,12 +50,15 @@ jobs:
           export PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig
           export PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu/pkgconfig
           ./configure --target-device=unknown
-          echo "=== Fixing Makefile for cross-compile ==="
+          echo "=== Fixing Makefile and config.mk for cross-compile ==="
           sed -i 's/-fstrict-flex-arrays=3//g' Makefile
           sed -i 's/ -Werror[^ ]*//g' Makefile
           sed -i 's/-DSDLFE_WITHOUT_SDL_TTF=1/-DSDLFE_WITHOUT_SDL_TTF=0/g' Makefile
-          sed -i '1i CFLAGS+=-D_GNU_SOURCE' Makefile
+          sed -i 's/SDLFE_WITHOUT_SDL_TTF=1/SDLFE_WITHOUT_SDL_TTF=0/g' config.mk
+          echo "--- Makefile CFLAGS after fix ---"
           grep CFLAGS Makefile | head -10
+          echo "--- config.mk TTF setting ---"
+          grep SDLFE_WITHOUT_SDL_TTF config.mk || true
 
       - name: Build Gmu
         run: |
@@ -63,7 +66,7 @@ jobs:
           export CC=aarch64-linux-gnu-gcc
           export CXX=aarch64-linux-gnu-g++
           export PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig
-          make -j$(nproc)
+          make -j$(nproc) CFLAGS="-D_GNU_SOURCE"
           echo "=== Build output ==="
           ls -lh gmu.bin frontends/sdl.so
           file gmu.bin
