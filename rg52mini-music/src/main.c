@@ -1,4 +1,4 @@
-/*
+﻿/*
  * RG52MINI Music Player - A custom music player for Anbernic RG52MINI
  * Based on SDL2, inspired by AiMusic UI layout
  * Screen: 1280x720, AArch64, EmuELEC 4.7
@@ -55,9 +55,9 @@ typedef struct {
     int list_scroll;
     int right_panel_mode; // 0=lyrics, 1=spectrum, 2=cover
     int show_help;
-    int play_mode;        // 0=顺序, 1=循环, 2=随机
-    int theme_index;      // 当前主题索引
-    int eq_enabled;       // EQ开关
+    int play_mode;        // 0=椤哄簭, 1=寰幆, 2=闅忔満
+    int theme_index;      // 褰撳墠涓婚绱㈠紩
+    int eq_enabled;       // EQ寮€鍏?
 } AppState;
 
 AppState *app = NULL;
@@ -214,6 +214,21 @@ void handle_input(SDL_Event *event) {
                 }
             }
             break;
+        case ACTION_PLAY:
+            if (app->playlist->count > 0) {
+                if (app->player->is_paused && player_current_track(app->player) &&
+                    strcmp(player_current_track(app->player), app->playlist->items[app->selected_index].path) == 0) {
+                    player_toggle_pause(app->player);
+                } else if (!player_is_playing(app->player) || !player_current_track(app->player) ||
+                    strcmp(player_current_track(app->player), app->playlist->items[app->selected_index].path) != 0) {
+                    player_play(app->player, app->playlist->items[app->selected_index].path);
+                    lyrics_load_for_track(app->lyrics, app->playlist->items[app->selected_index].path);
+                }
+            }
+            break;
+        case ACTION_PAUSE:
+            if (player_is_playing(app->player)) { player_toggle_pause(app->player); }
+            break;
         case ACTION_NEXT:
             player_next(app->player, app->playlist);
             break;
@@ -240,7 +255,7 @@ void handle_input(SDL_Event *event) {
             printf("Theme: %d\n", app->theme_index);
             break;
         case ACTION_BACK:
-            // 在主界面按B返回即退出
+            // 鍦ㄤ富鐣岄潰鎸塀杩斿洖鍗抽€€鍑?
             app->running = 0;
             break;
         case ACTION_VOL_UP:

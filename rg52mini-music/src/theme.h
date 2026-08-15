@@ -26,6 +26,12 @@ Theme *theme_load(const char *dir);
 // Create default theme (AiMusic dark blue style)
 Theme *theme_default(void);
 
+// Get theme by index (0 to theme_get_count()-1)
+Theme *theme_get_by_index(int index);
+
+// Get total number of themes
+int theme_get_count(void);
+
 // Free theme
 void theme_free(Theme *t);
 

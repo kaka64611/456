@@ -1,4 +1,4 @@
-#include "ui.h"
+﻿#include "ui.h"
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
@@ -123,9 +123,9 @@ void ui_draw_top_bar(SDL_Renderer *r, PlayerState *player,
         char title[256];
         playlist_get_display_name(current, title, sizeof(title));
         ui_render_text(r, font_large, title, 820, 15, text_color);
-        ui_render_text(r, font_med, "未知艺术家", 820, 50, dim);
+        ui_render_text(r, font_med, "鏈煡鑹烘湳瀹?, 820, 50, dim);
     } else {
-        ui_render_text(r, font_large, "未播放", 820, 25, dim);
+        ui_render_text(r, font_large, "鏈挱鏀?, 820, 25, dim);
     }
     
     // Time
@@ -158,7 +158,7 @@ void ui_draw_main_area(SDL_Renderer *r, Playlist *pl,
     
     if (panel_mode == 0) {
         // Lyrics mode
-        ui_render_text(r, font_med, "歌词", left_x + 20, top + 15, accent);
+        ui_render_text(r, font_med, "姝岃瘝", left_x + 20, top + 15, accent);
         
         // Current lyric (large, centered)
         const char *cur_lyric = lyrics_get_current(lyrics);
@@ -166,10 +166,10 @@ void ui_draw_main_area(SDL_Renderer *r, Playlist *pl,
             ui_render_text_centered(r, font_large, cur_lyric,
                 left_x + left_w/2, top + main_h/2 - 20, text_color);
         } else {
-            ui_render_text_centered(r, font_med, "暂无歌词",
+            ui_render_text_centered(r, font_med, "鏆傛棤姝岃瘝",
                 left_x + left_w/2, top + main_h/2, dim);
             ui_render_text_centered(r, font_small,
-                "将 .lrc 歌词文件与音乐放在同一目录",
+                "灏?.lrc 姝岃瘝鏂囦欢涓庨煶涔愭斁鍦ㄥ悓涓€鐩綍",
                 left_x + left_w/2, top + main_h/2 + 35, dim);
         }
         
@@ -187,7 +187,7 @@ void ui_draw_main_area(SDL_Renderer *r, Playlist *pl,
         }
     } else if (panel_mode == 1) {
         // Spectrum mode - AiMusic style: title + time + progress + big spectrum
-        ui_render_text(r, font_med, "频谱", left_x + 20, top + 15, accent);
+        ui_render_text(r, font_med, "棰戣氨", left_x + 20, top + 15, accent);
         
         // Song title (centered)
         const char *current = player_current_track(player);
@@ -224,8 +224,8 @@ void ui_draw_main_area(SDL_Renderer *r, Playlist *pl,
         }
     } else {
         // Cover mode
-        ui_render_text(r, font_med, "封面", left_x + 20, top + 15, accent);
-        ui_render_text_centered(r, font_med, "暂无封面",
+        ui_render_text(r, font_med, "灏侀潰", left_x + 20, top + 15, accent);
+        ui_render_text_centered(r, font_med, "鏆傛棤灏侀潰",
             left_x + left_w/2, top + main_h/2, dim);
     }
     
@@ -257,26 +257,11 @@ void ui_draw_main_area(SDL_Renderer *r, Playlist *pl,
         ui_render_text(r, font_small, pl->items[idx].title, right_x + 25, y + 8,
             idx == selected ? accent : text_color);
         
-        // Duration
-        char dur[16];
-        int dur_sec = pl->items[idx].duration;
-        // 如果正在播放这首歌且列表时长为0，用player跟踪的时长
-        const char *playing_track = player_current_track(player);
-        if (dur_sec <= 0 && playing_track && strcmp(playing_track, pl->items[idx].path) == 0) {
-            dur_sec = (int)player_get_duration(player);
-        }
-        if (dur_sec > 0) {
-            snprintf(dur, sizeof(dur), "%02d:%02d", dur_sec / 60, dur_sec % 60);
-        } else {
-            snprintf(dur, sizeof(dur), "--:--");
-        }
-        int dw; TTF_SizeUTF8(font_small, dur, &dw, NULL);
-        ui_render_text(r, font_small, dur, right_x + right_w - 30 - dw, y + 8, dim);
         
         // Playing indicator
         const char *cur = player_current_track(player);
         if (cur && strcmp(cur, pl->items[idx].path) == 0) {
-            ui_render_text(r, font_small, "▶", right_x + 10, y + 8, accent);
+            ui_render_text(r, font_small, "鈻?, right_x + 10, y + 8, accent);
         }
     }
 }
@@ -293,19 +278,16 @@ void ui_draw_bottom_bar(SDL_Renderer *r, int panel_mode,
     ui_draw_rounded_rect(r, 10, y + 5, 1260, t->bottom_bar_height - 10, 10, panel);
     
     // Mode buttons
-    const char *modes[] = { "歌词", "频谱", "封面" };
+    const char *modes[] = { "姝岃瘝", "棰戣氨", "灏侀潰" };
     for (int i = 0; i < 3; i++) {
         int bx = 30 + i * 100;
         SDL_Color c = (i == panel_mode) ? accent : dim;
         ui_render_text(r, font_small, modes[i], bx, y + 15, c);
     }
     
-    // Hint
-    ui_render_text(r, font_small, "A播放暂停 B返回 X EQ Y模式 L1/R1切歌 L2/R2主题 Start切面板 Select+Start退出",
-        150, y + 15, dim);
     
     // Battery (simulated)
-    ui_render_text(r, font_small, "电量 97%", 1150, y + 15, accent);
+    ui_render_text(r, font_small, "鐢甸噺 97%", 1150, y + 15, accent);
 }
 
 // Draw help overlay
@@ -317,18 +299,18 @@ void ui_draw_help(SDL_Renderer *r, TTF_Font *font, Theme *t) {
     SDL_RenderFillRect(r, &overlay);
     
     const char *lines[] = {
-        "=== 按键帮助 ===",
-        "↑↓ 选择歌曲",
-        "A 播放/暂停",
-        "B 返回/退出",
-        "X 切换EQ",
-        "Y 播放模式",
-        "L1/R1 上一曲/下一曲",
-        "L2/R2 切换主题",
-        "Start 切换面板(歌词/频谱/封面)",
-        "Select+Start 退出",
+        "=== 鎸夐敭甯姪 ===",
+        "鈫戔啌 閫夋嫨姝屾洸",
+        "A 鎾斁/鏆傚仠",
+        "B 杩斿洖/閫€鍑?,
+        "X 鍒囨崲EQ",
+        "Y 鎾斁妯″紡",
+        "L1/R1 涓婁竴鏇?涓嬩竴鏇?,
+        "L2/R2 鍒囨崲涓婚",
+        "Start 鍒囨崲闈㈡澘(姝岃瘝/棰戣氨/灏侀潰)",
+        "Select+Start 閫€鍑?,
         "",
-        "按任意键关闭"
+        "鎸変换鎰忛敭鍏抽棴"
     };
     
     int y = 150;

@@ -26,6 +26,24 @@ static double parse_time(const char *str) {
     return -1;
 }
 
+// Check if line looks like real lyrics (not JSON/URL/data)
+static int is_valid_lyric_line(const char *line) {
+    if (!line || line[0] == '\0') return 0;
+    int len = strlen(line);
+    // Too long = probably not lyrics
+    if (len > 150) return 0;
+    // Contains JSON braces or URL patterns
+    if (strchr(line, '{') || strchr(line, '}')) return 0;
+    if (strstr(line, "http") || strstr(line, "://")) return 0;
+    // Too many special characters
+    int special = 0;
+    for (int i = 0; i < len; i++) {
+        if (line[i] == '"' || line[i] == '\\' || line[i] == ':') special++;
+    }
+    if (special > len / 4) return 0;
+    return 1;
+}
+
 int lyrics_load_for_track(Lyrics *l, const char *track_path) {
     if (!l || !track_path) return -1;
     
@@ -61,6 +79,12 @@ int lyrics_load_for_track(Lyrics *l, const char *track_path) {
         // Remove trailing newline
         line[strcspn(line, "\r\n")] = '\0';
         
+        // Skip empty lines
+        if (line[0] == '\0') continue;
+        
+        // Skip invalid lines (JSON, URL, too long)
+        if (!is_valid_lyric_line(line)) continue;
+        
         // Try to parse LRC format [mm:ss.xx]text
         if (line[0] == '[') {
             double time = parse_time(line);
@@ -79,12 +103,15 @@ int lyrics_load_for_track(Lyrics *l, const char *track_path) {
                     continue;
                 }
                 
+                // Skip empty text
+                if (text[0] == '\0') continue;
+                
                 strncpy(l->lines[l->count].text, text, MAX_LYRIC_TEXT - 1);
                 l->lines[l->count].time = time;
                 l->count++;
             }
         } else if (line[0] != '\0') {
-            // Plain text line - assign sequential time
+            // Plain text line - assign sequential time (5 sec intervals)
             l->lines[l->count].time = l->count * 5.0;
             strncpy(l->lines[l->count].text, line, MAX_LYRIC_TEXT - 1);
             l->count++;

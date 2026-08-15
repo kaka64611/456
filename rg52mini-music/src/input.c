@@ -35,14 +35,14 @@ InputAction input_process(SDL_Event *event) {
             case SDLK_DOWN:  return ACTION_DOWN;
             case SDLK_LEFT:  return ACTION_LEFT;
             case SDLK_RIGHT: return ACTION_RIGHT;
-            case SDLK_a:     return ACTION_PLAY_PAUSE;   // A = 播放/暂停
-            case SDLK_b:     return ACTION_BACK;         // B = 返回
-            case SDLK_x:     return ACTION_TOGGLE_EQ;    // X = 切换EQ
-            case SDLK_y:     return ACTION_PLAY_MODE;    // Y = 播放模式
-            case SDLK_l:     return ACTION_PREV;         // L1 = 上一首
-            case SDLK_r:     return ACTION_NEXT;         // R1 = 下一首
-            case SDLK_o:     return ACTION_THEME_PREV;   // L2 = 上一个主题
-            case SDLK_p:     return ACTION_THEME_NEXT;   // R2 = 下一个主题
+            case SDLK_a:     return ACTION_PLAY;       // A = 播放
+            case SDLK_b:     return ACTION_PAUSE;      // B = 暂停
+            case SDLK_x:     return ACTION_TOGGLE_EQ;  // X = 切换EQ
+            case SDLK_y:     return ACTION_PLAY_MODE;  // Y = 播放模式
+            case SDLK_l:     return ACTION_PREV;       // L1 = 上一首
+            case SDLK_r:     return ACTION_NEXT;       // R1 = 下一首
+            case SDLK_o:     return ACTION_THEME_PREV; // L2 = 上一个主题
+            case SDLK_p:     return ACTION_THEME_NEXT; // R2 = 下一个主题
             case SDLK_RETURN:
             case SDLK_KP_ENTER:
                 if (alt) return ACTION_QUIT;             // Select+Start = 退出
