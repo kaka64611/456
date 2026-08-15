@@ -74,4 +74,5 @@ jobs:
         cp rg52mini-music/bin/rg52mini-music bin/rg52mini-music
         git add bin/rg52mini-music
         git commit -m "Add compiled RG52MINI Music Player AArch64 binary" || echo "No changes to commit"
-        git push
+        git pull --rebase origin main || true
+        git push || echo "Push failed, binary available as artifact"
