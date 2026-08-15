@@ -123,9 +123,9 @@ void ui_draw_top_bar(SDL_Renderer *r, PlayerState *player,
         char title[256];
         playlist_get_display_name(current, title, sizeof(title));
         ui_render_text(r, font_large, title, 820, 15, text_color);
-        ui_render_text(r, font_med, "鏈煡鑹烘湳瀹?, 820, 50, dim);
+        ui_render_text(r, font_med, "Unknown Artist", 820, 50, dim);
     } else {
-        ui_render_text(r, font_large, "鏈挱鏀?, 820, 25, dim);
+        ui_render_text(r, font_large, "Not Playing", 820, 25, dim);
     }
     
     // Time
@@ -158,7 +158,7 @@ void ui_draw_main_area(SDL_Renderer *r, Playlist *pl,
     
     if (panel_mode == 0) {
         // Lyrics mode
-        ui_render_text(r, font_med, "姝岃瘝", left_x + 20, top + 15, accent);
+        ui_render_text(r, font_med, "Lyrics", left_x + 20, top + 15, accent);
         
         // Current lyric (large, centered)
         const char *cur_lyric = lyrics_get_current(lyrics);
@@ -166,10 +166,10 @@ void ui_draw_main_area(SDL_Renderer *r, Playlist *pl,
             ui_render_text_centered(r, font_large, cur_lyric,
                 left_x + left_w/2, top + main_h/2 - 20, text_color);
         } else {
-            ui_render_text_centered(r, font_med, "鏆傛棤姝岃瘝",
+            ui_render_text_centered(r, font_med, "No Lyrics",
                 left_x + left_w/2, top + main_h/2, dim);
             ui_render_text_centered(r, font_small,
-                "灏?.lrc 姝岃瘝鏂囦欢涓庨煶涔愭斁鍦ㄥ悓涓€鐩綍",
+                "Put .lrc file with music",
                 left_x + left_w/2, top + main_h/2 + 35, dim);
         }
         
@@ -187,7 +187,7 @@ void ui_draw_main_area(SDL_Renderer *r, Playlist *pl,
         }
     } else if (panel_mode == 1) {
         // Spectrum mode - AiMusic style: title + time + progress + big spectrum
-        ui_render_text(r, font_med, "棰戣氨", left_x + 20, top + 15, accent);
+        ui_render_text(r, font_med, "Spectrum", left_x + 20, top + 15, accent);
         
         // Song title (centered)
         const char *current = player_current_track(player);
@@ -224,8 +224,8 @@ void ui_draw_main_area(SDL_Renderer *r, Playlist *pl,
         }
     } else {
         // Cover mode
-        ui_render_text(r, font_med, "灏侀潰", left_x + 20, top + 15, accent);
-        ui_render_text_centered(r, font_med, "鏆傛棤灏侀潰",
+        ui_render_text(r, font_med, "Cover", left_x + 20, top + 15, accent);
+        ui_render_text_centered(r, font_med, "No Cover",
             left_x + left_w/2, top + main_h/2, dim);
     }
     
@@ -261,7 +261,7 @@ void ui_draw_main_area(SDL_Renderer *r, Playlist *pl,
         // Playing indicator
         const char *cur = player_current_track(player);
         if (cur && strcmp(cur, pl->items[idx].path) == 0) {
-            ui_render_text(r, font_small, "鈻?, right_x + 10, y + 8, accent);
+            ui_render_text(r, font_small, ">", right_x + 10, y + 8, accent);
         }
     }
 }
@@ -278,7 +278,7 @@ void ui_draw_bottom_bar(SDL_Renderer *r, int panel_mode,
     ui_draw_rounded_rect(r, 10, y + 5, 1260, t->bottom_bar_height - 10, 10, panel);
     
     // Mode buttons
-    const char *modes[] = { "姝岃瘝", "棰戣氨", "灏侀潰" };
+    const char *modes[] = { "Lyrics", "Spectrum", "Cover" };
     for (int i = 0; i < 3; i++) {
         int bx = 30 + i * 100;
         SDL_Color c = (i == panel_mode) ? accent : dim;
@@ -287,7 +287,7 @@ void ui_draw_bottom_bar(SDL_Renderer *r, int panel_mode,
     
     
     // Battery (simulated)
-    ui_render_text(r, font_small, "鐢甸噺 97%", 1150, y + 15, accent);
+    ui_render_text(r, font_small, "Bat 97%", 1150, y + 15, accent);
 }
 
 // Draw help overlay
