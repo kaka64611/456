@@ -4,6 +4,8 @@
 #include <string.h>
 #include <stdio.h>
 
+#define AUDIO_RING_SIZE 8192
+
 struct PlayerState {
     Mix_Music *music;
     char current_path[MAX_PATH_LEN];
@@ -15,7 +17,36 @@ struct PlayerState {
     int track_finished;
     Uint32 start_tick;
     Uint32 pause_tick;
+    // Real audio ring buffer for spectrum
+    short audio_ring[AUDIO_RING_SIZE];
+    volatile int audio_write_pos;
+    volatile int audio_count;
 };
+
+// Global pointer for postmix callback (SDL_mixer callback doesn't pass userdata reliably)
+static PlayerState *g_player = NULL;
+
+// Postmix callback: captures real mixed audio for spectrum
+static void postmix_callback(void *udata, Uint8 *stream, int len) {
+    (void)udata;
+    if (!g_player || !stream || len <= 0) return;
+    
+    short *samples = (short *)stream;
+    int frame_count = len / 4; // 16-bit stereo = 4 bytes per frame
+    
+    for (int i = 0; i < frame_count; i++) {
+        // Mix left and right channels to mono
+        short left = samples[i * 2];
+        short right = samples[i * 2 + 1];
+        short mono = (short)(((int)left + (int)right) / 2);
+        
+        g_player->audio_ring[g_player->audio_write_pos] = mono;
+        g_player->audio_write_pos = (g_player->audio_write_pos + 1) % AUDIO_RING_SIZE;
+        if (g_player->audio_count < AUDIO_RING_SIZE) {
+            g_player->audio_count++;
+        }
+    }
+}
 
 static void music_finished_hook() {
     // This will be handled in update() via Mix_PlayingMusic check
@@ -25,16 +56,20 @@ PlayerState *player_init(void) {
     PlayerState *p = (PlayerState *)calloc(1, sizeof(PlayerState));
     if (!p) return NULL;
     
+    g_player = p;
+    
     // Initialize SDL_mixer
-    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 4096) < 0) {
+    if (Mix_OpenAudio(44100, AUDIO_S16SYS, 2, 4096) < 0) {
         fprintf(stderr, "Mix_OpenAudio failed: %s\n", Mix_GetError());
-        // Try alternate format
         if (Mix_OpenAudio(48000, AUDIO_S16SYS, 2, 4096) < 0) {
             fprintf(stderr, "Mix_OpenAudio retry failed: %s\n", Mix_GetError());
         }
     }
     
+    // Register postmix callback to capture real audio
+    Mix_SetPostMix(postmix_callback, NULL);
     Mix_HookMusicFinished(music_finished_hook);
+    
     p->volume = 70;
     Mix_VolumeMusic(p->volume);
     
@@ -43,8 +78,10 @@ PlayerState *player_init(void) {
 
 void player_free(PlayerState *p) {
     if (!p) return;
+    Mix_SetPostMix(NULL, NULL);
     if (p->music) Mix_FreeMusic(p->music);
     Mix_CloseAudio();
+    if (g_player == p) g_player = NULL;
     free(p);
 }
 
@@ -64,9 +101,10 @@ int player_play(PlayerState *p, const char *path) {
     }
     
     strncpy(p->current_path, path, MAX_PATH_LEN - 1);
-    // Mix_MusicDuration requires SDL2_mixer >= 2.6.0, not available on EE4.7
-    // Duration will be estimated from position / track length if needed
     p->duration = 0;
+    // Reset audio ring buffer
+    p->audio_write_pos = 0;
+    p->audio_count = 0;
     
     if (Mix_PlayMusic(p->music, 0) < 0) {
         fprintf(stderr, "Mix_PlayMusic failed: %s\n", Mix_GetError());
@@ -171,7 +209,6 @@ int player_track_finished(PlayerState *p) {
 
 void player_update(PlayerState *p) {
     if (!p) return;
-    // Track max position as estimated duration (Mix_MusicDuration not available)
     if (p->is_playing && !p->is_paused) {
         double pos = player_get_position(p);
         if (pos > p->duration) {
@@ -180,24 +217,20 @@ void player_update(PlayerState *p) {
     }
 }
 
+// Get real audio buffer from ring buffer for spectrum analysis
 int player_get_audio_buffer(PlayerState *p, short *buffer, int samples) {
-    // SDL_mixer doesn't easily expose raw audio buffer
-    // Generate simulated multi-frequency data that looks like music spectrum
-    static float phase1 = 0, phase2 = 0, phase3 = 0, phase4 = 0;
-    static float energy = 0.5f;
+    if (!p || !buffer || samples <= 0) return 0;
+    
+    if (p->audio_count < samples) {
+        // Not enough data yet, fill with silence
+        memset(buffer, 0, samples * sizeof(short));
+        return p->audio_count;
+    }
+    
+    // Read the most recent 'samples' from ring buffer
+    int start = (p->audio_write_pos - samples + AUDIO_RING_SIZE) % AUDIO_RING_SIZE;
     for (int i = 0; i < samples; i++) {
-        phase1 += 0.05f;   // 低频
-        phase2 += 0.15f;   // 中低频
-        phase3 += 0.4f;    // 中频
-        phase4 += 0.9f;    // 高频
-        // 模拟音乐的动态能量变化
-        energy += ((float)rand() / RAND_MAX - 0.5f) * 0.1f;
-        if (energy < 0.2f) energy = 0.2f;
-        if (energy > 1.0f) energy = 1.0f;
-        
-        float sample = sin(phase1) * 0.4f + sin(phase2) * 0.3f 
-                     + sin(phase3) * 0.2f + sin(phase4) * 0.1f;
-        buffer[i] = (short)(sample * 8000 * energy * (p->is_playing ? 1 : 0));
+        buffer[i] = p->audio_ring[(start + i) % AUDIO_RING_SIZE];
     }
     return samples;
 }
