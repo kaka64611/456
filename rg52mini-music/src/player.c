@@ -137,6 +137,11 @@ int player_is_playing(PlayerState *p) {
     return p->is_playing && !p->is_paused;
 }
 
+int player_is_paused(PlayerState *p) {
+    if (!p) return 0;
+    return p->is_paused;
+}
+
 const char *player_current_track(PlayerState *p) {
     if (!p) return NULL;
     return p->current_path[0] ? p->current_path : NULL;

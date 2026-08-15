@@ -216,7 +216,7 @@ void handle_input(SDL_Event *event) {
             break;
         case ACTION_PLAY:
             if (app->playlist->count > 0) {
-                if (app->player->is_paused && player_current_track(app->player) &&
+                if (player_is_paused(app->player) && player_current_track(app->player) &&
                     strcmp(player_current_track(app->player), app->playlist->items[app->selected_index].path) == 0) {
                     player_toggle_pause(app->player);
                 } else if (!player_is_playing(app->player) || !player_current_track(app->player) ||

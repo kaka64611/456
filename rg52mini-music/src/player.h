@@ -21,6 +21,9 @@ void player_toggle_pause(PlayerState *p);
 // Check if playing
 int player_is_playing(PlayerState *p);
 
+// Check if paused
+int player_is_paused(PlayerState *p);
+
 // Get current track path
 const char *player_current_track(PlayerState *p);
 
