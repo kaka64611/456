@@ -138,7 +138,7 @@ void ui_draw_top_bar(SDL_Renderer *r, PlayerState *player,
 void ui_draw_main_area(SDL_Renderer *r, Playlist *pl,
     int selected, int scroll, int panel_mode, Lyrics *lyrics,
     Spectrum *spec, PlayerState *player,
-    TTF_Font *font_small, TTF_Font *font_med, Theme *t) {
+    TTF_Font *font_small, TTF_Font *font_med, TTF_Font *font_large, Theme *t) {
     int top = t->top_bar_height;
     int bottom = 720 - t->bottom_bar_height;
     int main_h = bottom - top;

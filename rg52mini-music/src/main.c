@@ -260,7 +260,7 @@ void render() {
     // Draw main area (left playlist + right spectrum/lyrics)
     ui_draw_main_area(r, app->playlist, app->selected_index,
         app->list_scroll, app->right_panel_mode, app->lyrics,
-        app->spectrum, app->player, app->font_small, app->font_medium, t);
+        app->spectrum, app->player, app->font_small, app->font_medium, app->font_large, t);
     
     // Draw bottom bar
     ui_draw_bottom_bar(r, app->right_panel_mode, app->player,
