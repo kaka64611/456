@@ -1,5 +1,6 @@
 #include "player.h"
 #include "playlist.h"
+#include <SDL2/SDL.h>
 #include <string.h>
 #include <stdio.h>
 

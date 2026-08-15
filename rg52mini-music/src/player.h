@@ -2,6 +2,7 @@
 #define PLAYER_H
 
 #include <SDL2/SDL_mixer.h>
+#include "playlist.h"
 
 typedef struct PlayerState PlayerState;
 
@@ -39,10 +40,10 @@ void player_set_volume(PlayerState *p, int volume);
 int player_get_volume(PlayerState *p);
 
 // Next track
-void player_next(PlayerState *p, struct Playlist *pl);
+void player_next(PlayerState *p, Playlist *pl);
 
 // Previous track
-void player_prev(PlayerState *p, struct Playlist *pl);
+void player_prev(PlayerState *p, Playlist *pl);
 
 // Check if track finished
 int player_track_finished(PlayerState *p);
