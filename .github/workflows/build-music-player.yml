@@ -1,0 +1,66 @@
+name: Build RG52MINI Music Player (AArch64)
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'rg52mini-music/**'
+      - '.github/workflows/build-music-player.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install cross-compilation toolchain
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu pkg-config
+        sudo dpkg --add-architecture arm64
+        sudo apt-get update
+    
+    - name: Install SDL2 libraries for arm64
+      run: |
+        sudo apt-get install -y \
+          libsdl2-dev:arm64 \
+          libsdl2-ttf-dev:arm64 \
+          libsdl2-image-dev:arm64 \
+          libsdl2-mixer-dev:arm64
+    
+    - name: Build for AArch64
+      env:
+        CC: aarch64-linux-gnu-gcc
+        PKG_CONFIG_PATH: /usr/lib/aarch64-linux-gnu/pkgconfig
+        PKG_CONFIG_SYSROOT_DIR: /
+      run: |
+        cd rg52mini-music
+        make clean
+        make all
+        file bin/rg52mini-music
+    
+    - name: Prepare package
+      run: |
+        mkdir -p package/rg52mini-music
+        cp rg52mini-music/bin/rg52mini-music package/rg52mini-music/
+        cp -r rg52mini-music/src package/rg52mini-music/ 2>/dev/null || true
+        cp rg52mini-music/Makefile package/rg52mini-music/ 2>/dev/null || true
+        cd package && tar czf ../rg52mini-music-aarch64.tar.gz rg52mini-music
+    
+    - name: Upload binary
+      uses: actions/upload-artifact@v4
+      with:
+        name: rg52mini-music-aarch64
+        path: rg52mini-music-aarch64.tar.gz
+    
+    - name: Commit binary to repo
+      run: |
+        git config user.name "github-actions"
+        git config user.email "actions@github.com"
+        mkdir -p bin
+        cp rg52mini-music/bin/rg52mini-music bin/rg52mini-music
+        git add bin/rg52mini-music
+        git commit -m "Add compiled RG52MINI Music Player AArch64 binary" || echo "No changes to commit"
+        git push || echo "Push failed"
