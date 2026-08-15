@@ -27,26 +27,28 @@ InputAction input_process(SDL_Event *event) {
     
     if (event->type == SDL_KEYDOWN) {
         SDL_Keycode key = event->key.keysym.sym;
+        int mod = event->key.keysym.mod;
+        int alt = (mod & KMOD_ALT) != 0;
         
         switch (key) {
             case SDLK_UP:    return ACTION_UP;
             case SDLK_DOWN:  return ACTION_DOWN;
             case SDLK_LEFT:  return ACTION_LEFT;
             case SDLK_RIGHT: return ACTION_RIGHT;
-            case SDLK_a:     return ACTION_SELECT;
-            case SDLK_b:     return ACTION_QUIT;       // B = 退出
-            case SDLK_x:     return ACTION_NEXT;       // X = 下一首
-            case SDLK_y:     return ACTION_PREV;       // Y = 上一首
-            case SDLK_l:     return ACTION_VOL_DOWN;   // L1 = 音量减
-            case SDLK_r:     return ACTION_VOL_UP;     // R1 = 音量加
-            case SDLK_o:     return ACTION_SEEK_BACKWARD; // L2 = 快退
-            case SDLK_p:     return ACTION_SEEK_FORWARD;  // R2 = 快进
-            case SDLK_q:     return ACTION_QUIT;       // Select = 退出
+            case SDLK_a:     return ACTION_PLAY_PAUSE;   // A = 播放/暂停
+            case SDLK_b:     return ACTION_BACK;         // B = 返回
+            case SDLK_x:     return ACTION_TOGGLE_EQ;    // X = 切换EQ
+            case SDLK_y:     return ACTION_PLAY_MODE;    // Y = 播放模式
+            case SDLK_l:     return ACTION_PREV;         // L1 = 上一首
+            case SDLK_r:     return ACTION_NEXT;         // R1 = 下一首
+            case SDLK_o:     return ACTION_THEME_PREV;   // L2 = 上一个主题
+            case SDLK_p:     return ACTION_THEME_NEXT;   // R2 = 下一个主题
             case SDLK_RETURN:
             case SDLK_KP_ENTER:
-                return ACTION_TOGGLE_PANEL;            // Start = 切换面板
+                if (alt) return ACTION_QUIT;             // Select+Start = 退出
+                return ACTION_TOGGLE_PANEL;              // Start = 切换面板
             case SDLK_ESCAPE:
-                return ACTION_QUIT;
+                return ACTION_QUIT;                      // Back = 退出
             case SDLK_SPACE:
                 return ACTION_PLAY_PAUSE;
             case SDLK_t:

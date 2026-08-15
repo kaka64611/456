@@ -296,8 +296,8 @@ void ui_draw_bottom_bar(SDL_Renderer *r, int panel_mode,
     }
     
     // Hint
-    ui_render_text(r, font_small, "T键切换 | A播放 B返回 X下一曲 Y上一曲",
-        400, y + 15, dim);
+    ui_render_text(r, font_small, "A播放暂停 B返回 X EQ Y模式 L1/R1切歌 L2/R2主题 Start切面板 Select+Start退出",
+        150, y + 15, dim);
     
     // Battery (simulated)
     ui_render_text(r, font_small, "电量 97%", 1150, y + 15, accent);
@@ -315,20 +315,19 @@ void ui_draw_help(SDL_Renderer *r, TTF_Font *font, Theme *t) {
         "=== 按键帮助 ===",
         "↑↓ 选择歌曲",
         "A 播放/暂停",
-        "B 返回",
-        "X 下一曲",
-        "Y 上一曲",
-        "L1/R1 音量减/加",
-        "L2/R2 快退/快进",
-        "T 切换右侧面板(歌词/频谱/封面)",
-        "Start 切换视图",
+        "B 返回/退出",
+        "X 切换EQ",
+        "Y 播放模式",
+        "L1/R1 上一曲/下一曲",
+        "L2/R2 切换主题",
+        "Start 切换面板(歌词/频谱/封面)",
         "Select+Start 退出",
         "",
         "按任意键关闭"
     };
     
     int y = 150;
-    for (int i = 0; i < 13; i++) {
+    for (int i = 0; i < 12; i++) {
         ui_render_text_centered(r, font, lines[i], 640, y, text);
         y += 35;
     }

@@ -55,6 +55,9 @@ typedef struct {
     int list_scroll;
     int right_panel_mode; // 0=lyrics, 1=spectrum, 2=cover
     int show_help;
+    int play_mode;        // 0=顺序, 1=循环, 2=随机
+    int theme_index;      // 当前主题索引
+    int eq_enabled;       // EQ开关
 } AppState;
 
 AppState *app = NULL;
@@ -137,6 +140,7 @@ int app_init(const char *music_dir) {
     // Initialize EQ
     app->eq = eq_init();
     eq_set_enabled(app->eq, 1);
+    app->eq_enabled = 1;
     
     // Input
     input_init();
@@ -215,6 +219,29 @@ void handle_input(SDL_Event *event) {
             break;
         case ACTION_PREV:
             player_prev(app->player, app->playlist);
+            break;
+        case ACTION_TOGGLE_EQ:
+            app->eq_enabled = !app->eq_enabled;
+            eq_set_enabled(app->eq, app->eq_enabled);
+            printf("EQ %s\n", app->eq_enabled ? "ON" : "OFF");
+            break;
+        case ACTION_PLAY_MODE:
+            app->play_mode = (app->play_mode + 1) % 3;
+            printf("Play mode: %s\n", 
+                app->play_mode == 0 ? "Sequence" : 
+                app->play_mode == 1 ? "Repeat" : "Shuffle");
+            break;
+        case ACTION_THEME_PREV:
+            app->theme_index = (app->theme_index + 2) % 3;
+            printf("Theme: %d\n", app->theme_index);
+            break;
+        case ACTION_THEME_NEXT:
+            app->theme_index = (app->theme_index + 1) % 3;
+            printf("Theme: %d\n", app->theme_index);
+            break;
+        case ACTION_BACK:
+            // 在主界面按B返回即退出
+            app->running = 0;
             break;
         case ACTION_VOL_UP:
             player_set_volume(app->player, 
