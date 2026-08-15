@@ -8,37 +8,41 @@ on:
       - '.github/workflows/build-music-player.yml'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     
     steps:
     - uses: actions/checkout@v4
     
-    - name: Install cross-compilation toolchain
+    - name: Install AArch64 cross-compiler
       run: |
-        sudo apt-get update
-        sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu pkg-config
-        sudo dpkg --add-architecture arm64
-        sudo apt-get update
+        sudo apt update
+        sudo apt install -y build-essential gcc-aarch64-linux-gnu g++-aarch64-linux-gnu pkg-config
     
-    - name: Install SDL2 libraries for arm64
+    - name: Setup arm64 apt and install SDL2 dev libs
       run: |
-        sudo apt-get install -y \
-          libsdl2-dev:arm64 \
-          libsdl2-ttf-dev:arm64 \
-          libsdl2-image-dev:arm64 \
-          libsdl2-mixer-dev:arm64
+        sudo dpkg --add-architecture arm64
+        sudo sed -i 's/^deb /deb [arch=amd64] /' /etc/apt/sources.list
+        echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list
+        echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list
+        echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-security main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list
+        sudo apt update
+        sudo apt install -y libsdl2-dev:arm64 libsdl2-image-dev:arm64 libsdl2-ttf-dev:arm64 libsdl2-mixer-dev:arm64
     
     - name: Build for AArch64
       env:
         CC: aarch64-linux-gnu-gcc
+        CXX: aarch64-linux-gnu-g++
         PKG_CONFIG_PATH: /usr/lib/aarch64-linux-gnu/pkgconfig
-        PKG_CONFIG_SYSROOT_DIR: /
       run: |
         cd rg52mini-music
         make clean
         make all
+        ls -lh bin/rg52mini-music
         file bin/rg52mini-music
     
     - name: Prepare package
@@ -57,10 +61,10 @@ jobs:
     
     - name: Commit binary to repo
       run: |
-        git config user.name "github-actions"
-        git config user.email "actions@github.com"
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
         mkdir -p bin
         cp rg52mini-music/bin/rg52mini-music bin/rg52mini-music
         git add bin/rg52mini-music
         git commit -m "Add compiled RG52MINI Music Player AArch64 binary" || echo "No changes to commit"
-        git push || echo "Push failed"
+        git push
