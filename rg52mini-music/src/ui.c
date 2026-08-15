@@ -5,7 +5,7 @@
 
 // Forward declaration
 void filledCircleRGBA(SDL_Renderer *r, int cx, int cy, int radius,
-    Uint8 r, Uint8 g, Uint8 b, Uint8 a);
+    Uint8 rr, Uint8 gg, Uint8 bb, Uint8 aa);
 
 // Helper: render text
 void ui_render_text(SDL_Renderer *r, TTF_Font *font,
