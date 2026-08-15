@@ -1,0 +1,76 @@
+name: Build Gmu for RG52MINI (commit binaries)
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout Gmu source
+        uses: actions/checkout@v4
+        with:
+          repository: jhe2/gmu
+          path: gmu-src
+      - name: Checkout our patches
+        uses: actions/checkout@v4
+        with:
+          path: our-patches
+      - name: Apply EQ patches (default enabled)
+        run: |
+          cp our-patches/patches/audio.h gmu-src/src/audio.h
+          cp our-patches/patches/audio.c gmu-src/src/audio.c
+          sed -i 's/eq_enabled = 0/eq_enabled = 1/' gmu-src/src/audio.c
+          echo "EQ patches applied, eq_enabled=1 by default"
+      - name: Install AArch64 cross-compiler
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential gcc-aarch64-linux-gnu g++-aarch64-linux-gnu pkg-config
+      - name: Setup arm64 apt and install SDL2 dev libs
+        run: |
+          sudo dpkg --add-architecture arm64
+          sudo sed -i 's/^deb /deb [arch=amd64] /' /etc/apt/sources.list
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-security main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list
+          sudo apt update
+          sudo apt install -y libsdl2-dev:arm64 libsdl2-image-dev:arm64 libsdl2-ttf-dev:arm64
+      - name: Configure Gmu
+        run: |
+          cd gmu-src
+          export CC=aarch64-linux-gnu-gcc
+          export CXX=aarch64-linux-gnu-g++
+          export PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig
+          ./configure --target-device=unknown
+          sed -i 's/-fstrict-flex-arrays=3//g' Makefile
+          sed -i '/^CFLAGS+=/s/-Werror[^ ]*//g' Makefile
+          sed -i 's/SDLFE_WITHOUT_SDL_TTF=1/SDLFE_WITHOUT_SDL_TTF=0/g' Makefile
+          sed -i 's/SDLFE_WITHOUT_SDL_TTF=1/SDLFE_WITHOUT_SDL_TTF=0/g' config.mk
+          sed -i '0,/^CFLAGS+=/s//CFLAGS+=-D_GNU_SOURCE /' Makefile
+          sed -i 's/^CFLAGS=/CFLAGS=-D_GNU_SOURCE /' config.mk
+          echo 'LIBS_CORE+=-lm' >> Makefile
+      - name: Build Gmu
+        run: |
+          cd gmu-src
+          export CC=aarch64-linux-gnu-gcc
+          export CXX=aarch64-linux-gnu-g++
+          export PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig
+          make -j2
+          ls -lh gmu.bin frontends/sdl.so
+          file gmu.bin
+      - name: Commit binaries to repo
+        run: |
+          cd our-patches
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          mkdir -p bin
+          cp ../gmu-src/gmu.bin bin/gmu.bin
+          cp ../gmu-src/frontends/sdl.so bin/sdl.so
+          git add bin/gmu.bin bin/sdl.so
+          git commit -m "Add compiled gmu.bin and sdl.so (TTF + EQ default enabled)" || echo "No changes to commit"
+          git push
+          
+
+
