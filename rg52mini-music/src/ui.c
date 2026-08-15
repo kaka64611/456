@@ -261,8 +261,8 @@ void ui_draw_main_area(SDL_Renderer *r, Playlist *pl,
         char dur[16];
         int dur_sec = pl->items[idx].duration;
         // 如果正在播放这首歌且列表时长为0，用player跟踪的时长
-        const char *cur = player_current_track(player);
-        if (dur_sec <= 0 && cur && strcmp(cur, pl->items[idx].path) == 0) {
+        const char *playing_track = player_current_track(player);
+        if (dur_sec <= 0 && playing_track && strcmp(playing_track, pl->items[idx].path) == 0) {
             dur_sec = (int)player_get_duration(player);
         }
         if (dur_sec > 0) {
