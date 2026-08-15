@@ -63,7 +63,9 @@ int player_play(PlayerState *p, const char *path) {
     }
     
     strncpy(p->current_path, path, MAX_PATH_LEN - 1);
-    p->duration = Mix_MusicDuration(p->music);
+    // Mix_MusicDuration requires SDL2_mixer >= 2.6.0, not available on EE4.7
+    // Duration will be estimated from position / track length if needed
+    p->duration = 0;
     
     if (Mix_PlayMusic(p->music, 0) < 0) {
         fprintf(stderr, "Mix_PlayMusic failed: %s\n", Mix_GetError());
