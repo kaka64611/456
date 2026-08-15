@@ -259,9 +259,14 @@ void ui_draw_main_area(SDL_Renderer *r, Playlist *pl,
         
         // Duration
         char dur[16];
-        if (pl->items[idx].duration > 0) {
-            snprintf(dur, sizeof(dur), "%02d:%02d", pl->items[idx].duration / 60,
-                pl->items[idx].duration % 60);
+        int dur_sec = pl->items[idx].duration;
+        // 如果正在播放这首歌且列表时长为0，用player跟踪的时长
+        const char *cur = player_current_track(player);
+        if (dur_sec <= 0 && cur && strcmp(cur, pl->items[idx].path) == 0) {
+            dur_sec = (int)player_get_duration(player);
+        }
+        if (dur_sec > 0) {
+            snprintf(dur, sizeof(dur), "%02d:%02d", dur_sec / 60, dur_sec % 60);
         } else {
             snprintf(dur, sizeof(dur), "--:--");
         }

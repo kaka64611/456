@@ -171,7 +171,13 @@ int player_track_finished(PlayerState *p) {
 
 void player_update(PlayerState *p) {
     if (!p) return;
-    // Position is calculated on demand in player_get_position
+    // Track max position as estimated duration (Mix_MusicDuration not available)
+    if (p->is_playing && !p->is_paused) {
+        double pos = player_get_position(p);
+        if (pos > p->duration) {
+            p->duration = pos;
+        }
+    }
 }
 
 int player_get_audio_buffer(PlayerState *p, short *buffer, int samples) {
