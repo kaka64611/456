@@ -1,0 +1,15 @@
+# RG52MINI Music Player - gptokeyb configuration
+# Maps gamepad buttons to keyboard keys for SDL input
+# Format: button = key (spaces around = required)
+
+back = escape
+start = enter
+a = a
+b = b
+x = x
+y = y
+l1 = l
+r1 = r
+l2 = o
+r2 = p
+select = q

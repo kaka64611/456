@@ -175,12 +175,23 @@ void player_update(PlayerState *p) {
 }
 
 int player_get_audio_buffer(PlayerState *p, short *buffer, int samples) {
-    // SDL_mixer doesn't easily expose audio buffer
-    // Return simulated data for spectrum
-    static float phase = 0;
+    // SDL_mixer doesn't easily expose raw audio buffer
+    // Generate simulated multi-frequency data that looks like music spectrum
+    static float phase1 = 0, phase2 = 0, phase3 = 0, phase4 = 0;
+    static float energy = 0.5f;
     for (int i = 0; i < samples; i++) {
-        phase += 0.1f;
-        buffer[i] = (short)(sin(phase) * 1000 * (p->is_playing ? 1 : 0));
+        phase1 += 0.05f;   // 低频
+        phase2 += 0.15f;   // 中低频
+        phase3 += 0.4f;    // 中频
+        phase4 += 0.9f;    // 高频
+        // 模拟音乐的动态能量变化
+        energy += ((float)rand() / RAND_MAX - 0.5f) * 0.1f;
+        if (energy < 0.2f) energy = 0.2f;
+        if (energy > 1.0f) energy = 1.0f;
+        
+        float sample = sin(phase1) * 0.4f + sin(phase2) * 0.3f 
+                     + sin(phase3) * 0.2f + sin(phase4) * 0.1f;
+        buffer[i] = (short)(sample * 8000 * energy * (p->is_playing ? 1 : 0));
     }
     return samples;
 }

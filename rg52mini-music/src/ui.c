@@ -259,8 +259,12 @@ void ui_draw_main_area(SDL_Renderer *r, Playlist *pl,
         
         // Duration
         char dur[16];
-        snprintf(dur, sizeof(dur), "%02d:%02d", pl->items[idx].duration / 60,
-            pl->items[idx].duration % 60);
+        if (pl->items[idx].duration > 0) {
+            snprintf(dur, sizeof(dur), "%02d:%02d", pl->items[idx].duration / 60,
+                pl->items[idx].duration % 60);
+        } else {
+            snprintf(dur, sizeof(dur), "--:--");
+        }
         int dw; TTF_SizeUTF8(font_small, dur, &dw, NULL);
         ui_render_text(r, font_small, dur, right_x + right_w - 30 - dw, y + 8, dim);
         
