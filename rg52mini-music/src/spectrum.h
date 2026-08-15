@@ -1,6 +1,7 @@
 #ifndef SPECTRUM_H
 #define SPECTRUM_H
 
+#include <SDL2/SDL.h>
 #include "player.h"
 
 typedef struct Spectrum {
