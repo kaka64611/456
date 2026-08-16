@@ -17,7 +17,7 @@ jobs:
     - name: Install AArch64 cross-compiler
       run: |
         sudo apt update
-        sudo apt install -y build-essential gcc-aarch64-linux-gnu g++-aarch64-linux-gnu pkg-config
+        sudo apt install -y build-essential gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
 
     - name: Setup arm64 apt and install SDL2 dev libs
       run: |
@@ -28,32 +28,29 @@ jobs:
         echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-security main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list
         sudo apt update
         sudo apt install -y libsdl2-dev:arm64 libsdl2-ttf-dev:arm64
-        echo "=== SDL2 check ==="
-        pkg-config --cflags --libs sdl2 SDL2_ttf
-        aarch64-linux-gnu-gcc --version | head -1
+        echo "=== Verify SDL2 headers ==="
+        ls /usr/include/SDL2/SDL.h && echo "SDL2 headers OK"
+        ls /usr/lib/aarch64-linux-gnu/libSDL2.so && echo "libSDL2 OK"
 
     - name: Prepare libmpv for linking
       run: |
         cd rg52mini-tv/libs
         ln -sf libmpv.so.2 libmpv.so
-        echo "=== libmpv deps ==="
-        aarch64-linux-gnu-readelf -d libmpv.so.2 | grep NEEDED || true
-        ls -la *.so* | head -20
+        ls -la libmpv*
 
-    - name: Build for AArch64 (verbose)
+    - name: Build for AArch64
       run: |
         cd rg52mini-tv
-        set -x
         mkdir -p obj
         # Compile each file
         for f in src/*.c; do
-          echo "=== Compiling $f ==="
+          echo "Compiling $f..."
           aarch64-linux-gnu-gcc -O2 -Wall -Wextra -std=c11 -D_GNU_SOURCE -D_REENTRANT \
-            -I/usr/include/SDL2 -Iinclude -c -o obj/$(basename $f .c).o $f 2>&1 || exit 1
+            -I/usr/include/SDL2 -Iinclude -c -o obj/$(basename $f .c).o $f || exit 1
         done
-        echo "=== Linking ==="
-        aarch64-linux-gnu-gcc -O2 -Llibs -o rg52mini-tv obj/*.o \
-          -lmpv -lSDL2 -lSDL2_ttf -lpthread -lm 2>&1 || exit 1
+        echo "Linking..."
+        aarch64-linux-gnu-gcc -O2 -Llibs -L/usr/lib/aarch64-linux-gnu -o rg52mini-tv obj/*.o \
+          -lmpv -lSDL2 -lSDL2_ttf -lpthread -lm || exit 1
         file rg52mini-tv
         echo "=== Build success ==="
 
