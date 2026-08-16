@@ -5,8 +5,14 @@ static SDL_Joystick *joystick = NULL;
 static int alt_held = 0; // Track Select (alt) key for combos
 
 void input_init(void) {
-    // Joystick handled by gptokeyb, do not open directly
-    printf("Input: using gptokeyb keyboard mapping\n");
+    if (SDL_NumJoysticks() > 0) {
+        joystick = SDL_JoystickOpen(0);
+        if (joystick) {
+            printf("Opened joystick: %s\n", SDL_JoystickName(joystick));
+        }
+    } else {
+        printf("No joystick found, using keyboard\n");
+    }
 }
 
 void input_cleanup(void) {
@@ -17,59 +23,78 @@ void input_cleanup(void) {
 }
 
 // Map RG52MINI buttons to actions
-// gptokeyb translates gamepad buttons to keyboard keys
-// So we primarily handle keyboard events
+// Handle both joystick (direct) and keyboard (gptokeyb) events
+static int select_held = 0; // Track Select button for combo
+
 InputAction input_process(SDL_Event *event) {
     if (!event) return ACTION_NONE;
-    
+
+    // === Direct joystick button events (most reliable) ===
+    if (event->type == SDL_JOYBUTTONDOWN) {
+        Uint8 btn = event->jbutton.button;
+        switch (btn) {
+            case 0: return ACTION_PLAY;        // A = Play
+            case 1: return ACTION_PAUSE;       // B = Pause
+            case 2: return ACTION_TOGGLE_EQ;   // X = EQ preset
+            case 3: return ACTION_PLAY_MODE;   // Y = Play mode
+            case 4: return ACTION_PREV;        // L1 = Previous
+            case 5: return ACTION_NEXT;        // R1 = Next
+            case 6: return ACTION_THEME_PREV;  // L2 = Theme prev
+            case 7: return ACTION_THEME_NEXT;  // R2 = Theme next
+            case 8:                            // Select
+                select_held = 1;
+                return ACTION_NONE;
+            case 9:                            // Start
+                if (select_held) return ACTION_QUIT; // Select+Start = Quit
+                return ACTION_TOGGLE_PANEL;
+            default: return ACTION_NONE;
+        }
+    }
+
+    if (event->type == SDL_JOYBUTTONUP) {
+        Uint8 btn = event->jbutton.button;
+        if (btn == 8) select_held = 0; // Select released
+        return ACTION_NONE;
+    }
+
+    // Joystick hat (D-pad)
+    if (event->type == SDL_JOYHATMOTION) {
+        Uint8 hat = event->jhat.value;
+        if (hat & SDL_HAT_UP) return ACTION_UP;
+        if (hat & SDL_HAT_DOWN) return ACTION_DOWN;
+        if (hat & SDL_HAT_LEFT) return ACTION_VOL_DOWN;
+        if (hat & SDL_HAT_RIGHT) return ACTION_VOL_UP;
+    }
+
+    // === Keyboard events (gptokeyb fallback) ===
     if (event->type == SDL_KEYDOWN) {
         SDL_Keycode key = event->key.keysym.sym;
         int mod = event->key.keysym.mod;
-        int alt = (mod & KMOD_ALT) != 0 || alt_held;
-        
-        // Track alt key state
-        if (key == SDLK_LALT || key == SDLK_RALT || key == SDLK_MODE) {
-            alt_held = 1;
-            return ACTION_NONE;
-        }
-        
+        int alt = (mod & KMOD_ALT) != 0;
+
         switch (key) {
             case SDLK_UP:    return ACTION_UP;
             case SDLK_DOWN:  return ACTION_DOWN;
             case SDLK_LEFT:  return ACTION_VOL_DOWN;
             case SDLK_RIGHT: return ACTION_VOL_UP;
-            case SDLK_a:     return ACTION_PLAY;       // A = 播放
-            case SDLK_b:     return ACTION_PAUSE;      // B = 暂停
-            case SDLK_x:     return ACTION_TOGGLE_EQ;  // X = 切换EQ
-            case SDLK_y:     return ACTION_PLAY_MODE;  // Y = 播放模式
-            case SDLK_l:     return ACTION_PREV;       // L1 = 上一首
-            case SDLK_r:     return ACTION_NEXT;       // R1 = 下一首
-            case SDLK_o:     return ACTION_THEME_PREV; // L2 = 上一个主题
-            case SDLK_p:     return ACTION_THEME_NEXT; // R2 = 下一个主题
+            case SDLK_a:     return ACTION_PLAY;
+            case SDLK_b:     return ACTION_PAUSE;
+            case SDLK_x:     return ACTION_TOGGLE_EQ;
+            case SDLK_y:     return ACTION_PLAY_MODE;
+            case SDLK_l:     return ACTION_PREV;
+            case SDLK_r:     return ACTION_NEXT;
+            case SDLK_o:     return ACTION_THEME_PREV;
+            case SDLK_p:     return ACTION_THEME_NEXT;
             case SDLK_RETURN:
             case SDLK_KP_ENTER:
-                if (alt) return ACTION_QUIT;             // Select+Start = 退出
-                return ACTION_TOGGLE_PANEL;              // Start = 切换面板
-            case SDLK_ESCAPE:
-                return ACTION_QUIT;                      // Back = 退出
-            case SDLK_SPACE:
-                return ACTION_PLAY_PAUSE;
-            case SDLK_t:
+                if (alt) return ACTION_QUIT;
                 return ACTION_TOGGLE_PANEL;
+            case SDLK_ESCAPE:
+                return ACTION_QUIT;
             default:
                 return ACTION_NONE;
         }
     }
-    
-    if (event->type == SDL_KEYUP) {
-        SDL_Keycode key = event->key.keysym.sym;
-        if (key == SDLK_LALT || key == SDLK_RALT || key == SDLK_MODE) {
-            alt_held = 0;
-        }
-    }
-    
-    // Joystick events are handled by gptokeyb (converted to keyboard)
-    // Direct joystick handling disabled to avoid conflicts
-    
+
     return ACTION_NONE;
 }
