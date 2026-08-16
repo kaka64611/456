@@ -180,32 +180,38 @@ void ui_draw_main_area(SDL_Renderer *r, Playlist *pl,
     ui_draw_rounded_rect(r, left_x, top + 5, left_w, main_h - 10, 12, panel);
     
     if (panel_mode == 0) {
-        // Lyrics mode
+        // Lyrics mode - Karaoke style, current line highlighted in center
         ui_render_text(r, font_med, "歌词", left_x + 20, top + 15, accent);
-        
-        // Current lyric (large, centered)
-        const char *cur_lyric = lyrics_get_current(lyrics);
-        if (cur_lyric) {
-            ui_render_text_centered(r, font_large, cur_lyric,
-                left_x + left_w/2, top + main_h/2 - 20, text_color);
-        } else {
+
+        int cur_idx = lyrics_get_current_index(lyrics);
+        int center_y = top + main_h / 2;
+        int line_h = 48;
+
+        if (lyrics->count == 0) {
             ui_render_text_centered(r, font_med, "暂无歌词",
-                left_x + left_w/2, top + main_h/2, dim);
+                left_x + left_w/2, center_y, dim);
             ui_render_text_centered(r, font_small,
                 "将歌词文件(.lrc)与音乐放在同一目录",
-                left_x + left_w/2, top + main_h/2 + 35, dim);
-        }
-        
-        // Surrounding lyrics (smaller, dimmer)
-        int cur_idx = lyrics_get_current_index(lyrics);
-        for (int i = -3; i <= 3; i++) {
-            if (i == 0) continue;
-            int li = cur_idx + i;
-            if (li >= 0 && li < lyrics->count) {
-                int y_off = top + main_h/2 + i * 35;
-                SDL_Color c = (abs(i) == 1) ? dim : (SDL_Color){100,120,140,255};
-                ui_render_text_centered(r, font_small,
-                    lyrics_get_line(lyrics, li), left_x + left_w/2, y_off, c);
+                left_x + left_w/2, center_y + 40, dim);
+        } else {
+            for (int i = -3; i <= 3; i++) {
+                int li = cur_idx + i;
+                if (li < 0 || li >= lyrics->count) continue;
+                int y_off = center_y + i * line_h - 14;
+                if (i == 0) {
+                    ui_render_text_centered(r, font_large,
+                        lyrics_get_line(lyrics, li),
+                        left_x + left_w/2, y_off, accent);
+                } else if (abs(i) == 1) {
+                    ui_render_text_centered(r, font_med,
+                        lyrics_get_line(lyrics, li),
+                        left_x + left_w/2, y_off, dim);
+                } else {
+                    SDL_Color far = {100, 110, 120, 255};
+                    ui_render_text_centered(r, font_small,
+                        lyrics_get_line(lyrics, li),
+                        left_x + left_w/2, y_off, far);
+                }
             }
         }
     } else if (panel_mode == 1) {

@@ -241,9 +241,17 @@ void handle_input(SDL_Event *event) {
             break;
         case ACTION_NEXT:
             player_next(app->player, app->playlist);
+            {
+                const char *cur = player_current_track(app->player);
+                if (cur) lyrics_load_for_track(app->lyrics, cur);
+            }
             break;
         case ACTION_PREV:
             player_prev(app->player, app->playlist);
+            {
+                const char *cur = player_current_track(app->player);
+                if (cur) lyrics_load_for_track(app->lyrics, cur);
+            }
             break;
         case ACTION_TOGGLE_EQ:
             // X key: cycle through EQ presets
@@ -353,6 +361,8 @@ void update() {
     // Auto-advance to next track
     if (player_track_finished(app->player)) {
         player_next(app->player, app->playlist);
+        const char *cur = player_current_track(app->player);
+        if (cur) lyrics_load_for_track(app->lyrics, cur);
     }
     
     // Update selected index to match current track only if not manually navigating
