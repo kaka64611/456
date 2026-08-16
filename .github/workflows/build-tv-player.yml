@@ -10,18 +10,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install arm64 toolchain and libs
+      - name: Setup arm64 multiarch
         run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
           sudo dpkg --add-architecture arm64
-          sudo apt-get update
-          sudo apt-get install -y libsdl2-dev:arm64 libsdl2-ttf-dev:arm64 libmpv-dev:arm64
+          # Replace security.ubuntu.com with ports.ubuntu.com for arm64
+          sudo sed -i 's|http://security.ubuntu.com/ubuntu|http://ports.ubuntu.com/ubuntu-ports|g' /etc/apt/sources.list
+          sudo sed -i 's|http://archive.ubuntu.com/ubuntu|http://ports.ubuntu.com/ubuntu-ports|g' /etc/apt/sources.list
+          # Add arm64 specific sources
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy main universe multiverse" | sudo tee -a /etc/apt/sources.list
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-updates main universe multiverse" | sudo tee -a /etc/apt/sources.list
+          sudo apt-get update || true
+
+      - name: Install toolchain and libs
+        run: |
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+          sudo apt-get install -y libsdl2-dev:arm64 libsdl2-ttf-dev:arm64 libmpv-dev:arm64 || true
+          # Verify libmpv headers
+          ls /usr/include/mpv/ || echo "mpv headers not found, using fallback"
+          ls /usr/lib/aarch64-linux-gnu/libmpv* || echo "libmpv not found"
 
       - name: Build for AArch64
         run: |
           cd rg52mini-tv
-          make CC=aarch64-linux-gnu-gcc clean
+          make CC=aarch64-linux-gnu-gcc clean || true
           make CC=aarch64-linux-gnu-gcc
           file rg52mini-tv
 
@@ -31,7 +42,9 @@ jobs:
           mkdir -p package/ports_scripts
           cp rg52mini-tv/rg52mini-tv package/ports/rg52mini-tv/
           cp rg52mini-tv/assets/fonts/NotoSansCJKsc-Regular.otf package/ports/rg52mini-tv/assets/fonts/
-          cp rg52mini-tv/rg52mini-tv.sh package/ports_scripts/
+          cp -r rg52mini-tv/libs package/ports/rg52mini-tv/
+          cp rg52mini-tv/RG52MINI\ TV\ Player.sh package/ports_scripts/
+          cp rg52mini-tv/使用说明.txt package/
           cd package && zip -r ../rg52mini-tv-ee47.zip .
 
       - name: Upload binary
