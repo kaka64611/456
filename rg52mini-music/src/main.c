@@ -256,6 +256,7 @@ void handle_input(SDL_Event *event) {
             break;
         case ACTION_PLAY_MODE:
             app->play_mode = (app->play_mode + 1) % 3;
+            player_set_play_mode(app->player, app->play_mode);
             printf("Play mode: %s\n", 
                 app->play_mode == 0 ? "Sequence" : 
                 app->play_mode == 1 ? "Repeat" : "Shuffle");

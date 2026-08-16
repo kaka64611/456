@@ -39,10 +39,10 @@ InputAction input_process(SDL_Event *event) {
             case 1: return ACTION_PAUSE;       // B = Pause
             case 2: printf("JOY X -> EQ\n"); return ACTION_TOGGLE_EQ;   // X = EQ preset
             case 3: printf("JOY Y -> MODE\n"); return ACTION_PLAY_MODE;   // Y = Play mode
-            case 4: return ACTION_PREV;        // L1 alt
-            case 5: return ACTION_NEXT;        // R1 alt
-            case 6: return ACTION_THEME_PREV;  // L2 alt
-            case 7: return ACTION_THEME_NEXT;  // R2 alt
+            case 4: return ACTION_UP;          // D-pad Up = scroll up
+            case 5: return ACTION_DOWN;        // D-pad Down = scroll down
+            case 6: return ACTION_VOL_DOWN;    // D-pad Left = volume down
+            case 7: return ACTION_VOL_UP;      // D-pad Right = volume up
             case 8:                            // Select alt
                 select_held = 1;
                 return ACTION_NONE;
