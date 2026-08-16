@@ -52,6 +52,49 @@ void ui_draw_rounded_rect(SDL_Renderer *r, int x, int y,
 }
 
 // Format time as MM:SS
+
+// Draw vertical gradient rectangle (glass panel effect)
+static void ui_draw_gradient_panel(SDL_Renderer *r, int x, int y, int w, int h, int radius, Theme *t) {
+    // Base fill
+    SDL_SetRenderDrawBlendMode(r, SDL_BLENDMODE_BLEND);
+    // Top gradient (lighter)
+    for (int i = 0; i < h / 2; i++) {
+        int alpha = 200 - (i * 100 / (h / 2));
+        if (alpha < 140) alpha = 140;
+        SDL_SetRenderDrawColor(r, t->panel_r + 15, t->panel_g + 15, t->panel_b + 20, alpha);
+        SDL_Rect line = { x + 2, y + i, w - 4, 1 };
+        SDL_RenderFillRect(r, &line);
+    }
+    // Bottom gradient (darker)
+    for (int i = h / 2; i < h; i++) {
+        int alpha = 140 + ((i - h/2) * 60 / (h/2));
+        if (alpha > 200) alpha = 200;
+        SDL_SetRenderDrawColor(r, t->panel_r - 5, t->panel_g - 5, t->panel_b - 5, alpha);
+        SDL_Rect line = { x + 2, y + i, w - 4, 1 };
+        SDL_RenderFillRect(r, &line);
+    }
+    // Border (glow effect)
+    SDL_SetRenderDrawColor(r, t->accent_r, t->accent_g, t->accent_b, 80);
+    SDL_Rect border = { x, y, w, 2 };
+    SDL_RenderFillRect(r, &border);
+    // Rounded corners simulation
+    ui_draw_rounded_rect(r, x, y, w, h, radius, (SDL_Color){t->panel_r, t->panel_g, t->panel_b, 0});
+}
+
+// Draw gradient bar (for spectrum and progress)
+static void ui_draw_gradient_bar(SDL_Renderer *r, int x, int y, int w, int h, Theme *t) {
+    if (h <= 0) return;
+    for (int i = 0; i < h; i++) {
+        int ratio = i * 255 / h;
+        Uint8 cr = t->accent_r - (t->accent_r * ratio / 510);
+        Uint8 cg = t->accent_g - (t->accent_g * ratio / 510);
+        Uint8 cb = t->accent_b - (t->accent_b * ratio / 510);
+        SDL_SetRenderDrawColor(r, cr, cg, cb, 255);
+        SDL_Rect line = { x, y + h - 1 - i, w, 1 };
+        SDL_RenderFillRect(r, &line);
+    }
+}
+
 static void format_time(double seconds, char *buf, int len) {
     int m = (int)seconds / 60;
     int s = (int)seconds % 60;
@@ -84,26 +127,7 @@ void ui_draw_top_bar(SDL_Renderer *r, PlayerState *player,
     ui_render_text(r, font_med, mode_buf, 30, 18, accent);
     ui_render_text(r, font_med, eq_buf, 30, 45, dim);
     
-    // Volume bar (floating, only shows when adjusting)
-    if (volume_show > 0) {
-        int vol = player_get_volume(player);
-        int vw = 400, vh = 24;
-        int vx = (1280 - vw) / 2;
-        int vy = 720 - 80;
-        SDL_SetRenderDrawBlendMode(r, SDL_BLENDMODE_BLEND);
-        SDL_SetRenderDrawColor(r, 0, 0, 0, 180);
-        SDL_Rect vol_box = { vx - 10, vy - 10, vw + 20, vh + 30 };
-        SDL_RenderFillRect(r, &vol_box);
-        SDL_SetRenderDrawColor(r, 60, 60, 60, 255);
-        SDL_Rect vol_bg = { vx, vy, vw, vh };
-        SDL_RenderFillRect(r, &vol_bg);
-        SDL_SetRenderDrawColor(r, t->accent_r, t->accent_g, t->accent_b, 255);
-        SDL_Rect vol_fg = { vx, vy, vw * vol / 100, vh };
-        SDL_RenderFillRect(r, &vol_fg);
-        char vol_buf[32];
-        snprintf(vol_buf, sizeof(vol_buf), "音量 %d%%", vol);
-        ui_render_text_centered(r, font_med, vol_buf, 640, vy + vh + 2, (SDL_Color){255,255,255,255});
-    }
+    // Volume bar moved to overlay (drawn last)
     
     // Center: playback controls (circles)
     int cx = 640, cy = h/2;
@@ -177,7 +201,7 @@ void ui_draw_main_area(SDL_Renderer *r, Playlist *pl,
     SDL_Color panel = { t->panel_r, t->panel_g, t->panel_b, 255 };
     
     // === LEFT panel: Spectrum / Lyrics / Cover (large area) ===
-    ui_draw_rounded_rect(r, left_x, top + 5, left_w, main_h - 10, 12, panel);
+    ui_draw_gradient_panel(r, left_x, top + 5, left_w, main_h - 10, 12, t);
     
     if (panel_mode == 0) {
         // Lyrics mode - Karaoke style, current line highlighted in center
@@ -259,7 +283,7 @@ void ui_draw_main_area(SDL_Renderer *r, Playlist *pl,
     }
     
     // === RIGHT panel: Playlist (AiMusic style) ===
-    ui_draw_rounded_rect(r, right_x, top + 5, right_w - 20, main_h - 10, 12, panel);
+    ui_draw_gradient_panel(r, right_x, top + 5, right_w - 20, main_h - 10, 12, t);
     
     // Playlist header
     char header[64];
@@ -336,4 +360,33 @@ void filledCircleRGBA(SDL_Renderer *r, int cx, int cy, int radius,
             }
         }
     }
+}
+
+
+// Floating volume overlay (drawn last, on top of everything)
+void ui_draw_volume_overlay(SDL_Renderer *r, PlayerState *player, Theme *t, TTF_Font *font_med) {
+    int vol = player_get_volume(player);
+    int vw = 500, vh = 28;
+    int vx = (1280 - vw) / 2;
+    int vy = 720 - 100;
+    
+    SDL_SetRenderDrawBlendMode(r, SDL_BLENDMODE_BLEND);
+    // Background glass panel
+    SDL_SetRenderDrawColor(r, 0, 0, 0, 200);
+    SDL_Rect vol_box = { vx - 20, vy - 15, vw + 40, vh + 45 };
+    SDL_RenderFillRect(r, &vol_box);
+    // Border glow
+    SDL_SetRenderDrawColor(r, t->accent_r, t->accent_g, t->accent_b, 100);
+    SDL_Rect vol_border = { vx - 20, vy - 15, vw + 40, 2 };
+    SDL_RenderFillRect(r, &vol_border);
+    // Bar background
+    SDL_SetRenderDrawColor(r, 40, 45, 55, 255);
+    SDL_Rect vol_bg = { vx, vy, vw, vh };
+    SDL_RenderFillRect(r, &vol_bg);
+    // Bar foreground (gradient)
+    ui_draw_gradient_bar(r, vx, vy, vw * vol / 100, vh, t);
+    // Volume text
+    char vol_buf[32];
+    snprintf(vol_buf, sizeof(vol_buf), "音量 %d%%", vol);
+    ui_render_text_centered(r, font_med, vol_buf, 640, vy + vh + 5, (SDL_Color){255,255,255,255});
 }

@@ -38,4 +38,6 @@ void ui_render_text_centered(SDL_Renderer *r, TTF_Font *font,
 void ui_draw_rounded_rect(SDL_Renderer *r, int x, int y,
     int w, int h, int radius, SDL_Color color);
 
+void ui_draw_volume_overlay(SDL_Renderer *r, PlayerState *player, Theme *t, TTF_Font *font_med);
+
 #endif

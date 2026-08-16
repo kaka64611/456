@@ -326,7 +326,7 @@ void render() {
     
     // Draw top bar
     ui_draw_top_bar(r, app->player, app->playlist, app->font_medium,
-        app->font_large, t, eq_get_current_preset(app->eq), app->volume_show_timer);
+        app->font_large, t, eq_get_current_preset(app->eq), 0);
     
     // Draw main area (left playlist + right spectrum/lyrics)
     ui_draw_main_area(r, app->playlist, app->selected_index,
@@ -342,6 +342,11 @@ void render() {
         ui_draw_help(r, app->font_medium, t);
     }
     
+    // Floating volume overlay (on top of everything)
+    if (app->volume_show_timer > 0) {
+        ui_draw_volume_overlay(r, app->player, t, app->font_medium);
+    }
+
     SDL_RenderPresent(r);
 }
 
