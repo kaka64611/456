@@ -41,8 +41,8 @@ InputAction input_process(SDL_Event *event) {
             case 3: printf("JOY Y -> MODE\n"); return ACTION_PLAY_MODE;   // Y = Play mode
             case 4: return ACTION_UP;          // D-pad Up = scroll up
             case 5: return ACTION_DOWN;        // D-pad Down = scroll down
-            case 6: return ACTION_VOL_DOWN;    // D-pad Left = volume down
-            case 7: return ACTION_VOL_UP;      // D-pad Right = volume up
+            case 6: return ACTION_THEME_PREV;  // L2 = Theme prev
+            case 7: return ACTION_THEME_NEXT;  // R2 = Theme next
             case 8:                            // Select alt
                 select_held = 1;
                 return ACTION_NONE;
@@ -52,8 +52,8 @@ InputAction input_process(SDL_Event *event) {
             // RG52MINI actual button mapping (from debug log)
             case 14: return ACTION_PREV;       // L1 = Previous
             case 15: return ACTION_NEXT;       // R1 = Next
-            case 16: return ACTION_THEME_PREV; // L2 = Theme prev
-            case 17: return ACTION_THEME_NEXT; // R2 = Theme next
+            case 16: return ACTION_VOL_DOWN;   // D-pad Left = volume down
+            case 17: return ACTION_VOL_UP;     // D-pad Right = volume up
             default:
                 printf("JOY unhandled button: %d\n", btn);
                 return ACTION_NONE;
