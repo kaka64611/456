@@ -116,11 +116,12 @@ jobs:
       run: |
         mkdir -p bin
         cp rg52mini-tv/rg52mini-tv bin/
-        # Package all libs into a tarball for easy retrieval
-        cd package/ports/rg52mini-tv && tar czf ../../../bin/rg52mini-tv-libs.tar.gz libs && cd ../../..
+        # Copy all collected libs directly to repo (avoid large tarball issues)
+        rm -rf rg52mini-tv/libs-full
+        cp -r package/ports/rg52mini-tv/libs rg52mini-tv/libs-full
         git config user.name "rg52mini-tv"
         git config user.email "rg52mini@example.com"
-        git add bin/rg52mini-tv bin/rg52mini-tv-libs.tar.gz
+        git add bin/rg52mini-tv rg52mini-tv/libs-full/
         git commit -m "Build: rg52mini-tv AArch64 binary + all libs" || echo "No changes to commit"
         git pull --rebase origin main || true
         git push || echo "Push failed"
