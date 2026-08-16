@@ -405,20 +405,19 @@ void ui_draw_bottom_bar(SDL_Renderer *r, int panel_mode,
     
     // Mode buttons (tight spacing)
     const char *modes[] = { "歌词", "频谱", "封面" };
-    int mode_x = 25;
+    int x = 25;
     for (int i = 0; i < 3; i++) {
-        SDL_Color c = (i == panel_mode) ? accent : dim;
-        ui_render_text(r, font_small, modes[i], mode_x, y + 15, c);
-        mode_x += 52; // tight spacing
+        SDL_Color c = (i == panel_mode) ? accent : text_color;
+        ui_render_text(r, font_small, modes[i], x, y + 15, c);
+        x += 50;
     }
     
-    // Separator after mode buttons
-    ui_render_text(r, font_small, "|", mode_x, y + 15, dim);
-    mode_x += 15;
+    // Separator
+    ui_render_text(r, font_small, "|", x, y + 15, dim);
+    x += 15;
     
-    // Key hints
-    typedef struct { const char *key; const char *action; } KeyHint;
-    KeyHint hints[] = {
+    // Key hints (fixed spacing for reliability)
+    const char *hints[][2] = {
         {"Sel+Start", "退出"},
         {"A", "播放"},
         {"B", "暂停"},
@@ -427,22 +426,23 @@ void ui_draw_bottom_bar(SDL_Renderer *r, int panel_mode,
         {"L1", "上首"},
         {"R1", "下首"},
     };
-    int hint_count = sizeof(hints) / sizeof(hints[0]);
+    int hint_count = 7;
     
     for (int i = 0; i < hint_count; i++) {
-        // Key name in accent
-        ui_render_text(r, font_small, hints[i].key, mode_x, y + 15, accent);
-        int key_w = 0, dummy;
-        TTF_SizeText(font_small, hints[i].key, &key_w, &dummy);
-        // Action in dim
-        ui_render_text(r, font_small, hints[i].action, mode_x + key_w + 4, y + 15, dim);
+        // Key name in accent color
+        ui_render_text(r, font_small, hints[i][0], x, y + 15, accent);
+        // Measure key width manually (approximate)
+        int key_w = 0;
+        for (const char *p = hints[i][0]; *p; p++) key_w += (*p > 127) ? 16 : 9;
+        // Action in text color (brighter)
+        ui_render_text(r, font_small, hints[i][1], x + key_w + 4, y + 15, text_color);
         int act_w = 0;
-        TTF_SizeText(font_small, hints[i].action, &act_w, &dummy);
-        mode_x += key_w + act_w + 4;
-        // Separator between hints (except last)
+        for (const char *p = hints[i][1]; *p; p++) act_w += (*p > 127) ? 18 : 9;
+        x += key_w + act_w + 4;
+        // Separator
         if (i < hint_count - 1) {
-            ui_render_text(r, font_small, "|", mode_x, y + 15, dim);
-            mode_x += 12;
+            ui_render_text(r, font_small, "|", x, y + 15, dim);
+            x += 14;
         }
     }
     
