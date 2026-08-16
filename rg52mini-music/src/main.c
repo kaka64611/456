@@ -197,6 +197,11 @@ void handle_input(SDL_Event *event) {
         case ACTION_DOWN:
             if (app->selected_index < app->playlist->count - 1) {
                 app->selected_index++;
+                // Auto-scroll list to keep selection visible
+                int visible = 12; // approximate visible items
+                if (app->selected_index >= app->list_scroll + visible) {
+                    app->list_scroll = app->selected_index - visible + 1;
+                }
             }
             break;
         case ACTION_SELECT:
@@ -247,12 +252,16 @@ void handle_input(SDL_Event *event) {
                 app->play_mode == 1 ? "Repeat" : "Shuffle");
             break;
         case ACTION_THEME_PREV:
-            app->theme_index = (app->theme_index + 2) % 3;
-            printf("Theme: %d\n", app->theme_index);
+            app->theme_index = (app->theme_index + theme_get_count() - 1) % theme_get_count();
+            if (app->theme) free(app->theme);
+            app->theme = theme_get_by_index(app->theme_index);
+            printf("Theme: %d %s\n", app->theme_index, app->theme ? app->theme->name : "?");
             break;
         case ACTION_THEME_NEXT:
-            app->theme_index = (app->theme_index + 1) % 3;
-            printf("Theme: %d\n", app->theme_index);
+            app->theme_index = (app->theme_index + 1) % theme_get_count();
+            if (app->theme) free(app->theme);
+            app->theme = theme_get_by_index(app->theme_index);
+            printf("Theme: %d %s\n", app->theme_index, app->theme ? app->theme->name : "?");
             break;
         case ACTION_BACK:
             // 鍦ㄤ富鐣岄潰鎸塀杩斿洖鍗抽€€鍑?
@@ -326,8 +335,8 @@ void update() {
         spectrum_update(app->spectrum, app->player);
     }
     
-    // Update lyrics position
-    if (app->lyrics && player_is_playing(app->player)) {
+    // Update lyrics position (always update to show current lyric)
+    if (app->lyrics) {
         lyrics_update(app->lyrics, player_get_position(app->player));
     }
     
@@ -336,16 +345,8 @@ void update() {
         player_next(app->player, app->playlist);
     }
     
-    // Update selected index to match current track
-    const char *current = player_current_track(app->player);
-    if (current) {
-        for (int i = 0; i < app->playlist->count; i++) {
-            if (strcmp(app->playlist->items[i].path, current) == 0) {
-                app->selected_index = i;
-                break;
-            }
-        }
-    }
+    // Update selected index to match current track only if not manually navigating
+    // (disabled to allow manual list scrolling)
 }
 
 int main(int argc, char *argv[]) {

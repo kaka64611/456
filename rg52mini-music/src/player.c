@@ -215,9 +215,17 @@ int player_track_finished(PlayerState *p) {
 void player_update(PlayerState *p) {
     if (!p) return;
     if (p->is_playing && !p->is_paused) {
-        double pos = player_get_position(p);
-        if (pos > p->duration) {
-            p->duration = pos;
+        // Actively update position from tick counter
+        p->position = (double)(SDL_GetTicks() - p->start_tick) / 1000.0;
+        if (p->position < 0) p->position = 0;
+        // Track max position as duration estimate
+        if (p->position > p->duration) {
+            p->duration = p->position;
+        }
+        // Check if music actually stopped (finished or error)
+        if (!Mix_PlayingMusic() && !Mix_PausedMusic()) {
+            p->track_finished = 1;
+            p->is_playing = 0;
         }
     }
 }

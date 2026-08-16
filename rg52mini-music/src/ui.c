@@ -128,10 +128,24 @@ void ui_draw_top_bar(SDL_Renderer *r, PlayerState *player,
         ui_render_text(r, font_large, "Not Playing", 820, 25, dim);
     }
     
-    // Time
-    char timebuf[32];
-    format_time(player_get_position(player), timebuf, sizeof(timebuf));
-    ui_render_text(r, font_med, timebuf, 1150, 55, accent);
+    // Time + progress bar + duration
+    char timebuf[32], durbuf[32];
+    double pos = player_get_position(player);
+    double dur = player_get_duration(player);
+    format_time(pos, timebuf, sizeof(timebuf));
+    format_time(dur > 0 ? dur : pos, durbuf, sizeof(durbuf));
+    ui_render_text(r, font_small, timebuf, 820, 70, dim);
+    ui_render_text(r, font_small, durbuf, 1200, 70, dim);
+    // Progress bar
+    SDL_SetRenderDrawColor(r, 60, 80, 100, 255);
+    SDL_Rect pb_bg = { 870, 73, 320, 6 };
+    SDL_RenderFillRect(r, &pb_bg);
+    double ratio = (dur > 0.1) ? (pos / dur) : 0;
+    if (ratio > 1.0) ratio = 1.0;
+    if (ratio < 0) ratio = 0;
+    SDL_SetRenderDrawColor(r, t->accent_r, t->accent_g, t->accent_b, 255);
+    SDL_Rect pb_fg = { 870, 73, (int)(320 * ratio), 6 };
+    SDL_RenderFillRect(r, &pb_fg);
 }
 
 // Draw main area (LEFT: spectrum/lyrics, RIGHT: playlist) - AiMusic style

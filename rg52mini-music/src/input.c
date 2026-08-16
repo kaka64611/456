@@ -4,12 +4,8 @@
 static SDL_Joystick *joystick = NULL;
 
 void input_init(void) {
-    if (SDL_NumJoysticks() > 0) {
-        joystick = SDL_JoystickOpen(0);
-        if (joystick) {
-            printf("Opened joystick: %s\n", SDL_JoystickName(joystick));
-        }
-    }
+    // Joystick handled by gptokeyb, do not open directly
+    printf("Input: using gptokeyb keyboard mapping\n");
 }
 
 void input_cleanup(void) {
@@ -33,8 +29,8 @@ InputAction input_process(SDL_Event *event) {
         switch (key) {
             case SDLK_UP:    return ACTION_UP;
             case SDLK_DOWN:  return ACTION_DOWN;
-            case SDLK_LEFT:  return ACTION_LEFT;
-            case SDLK_RIGHT: return ACTION_RIGHT;
+            case SDLK_LEFT:  return ACTION_VOL_DOWN;
+            case SDLK_RIGHT: return ACTION_VOL_UP;
             case SDLK_a:     return ACTION_PLAY;       // A = 播放
             case SDLK_b:     return ACTION_PAUSE;      // B = 暂停
             case SDLK_x:     return ACTION_TOGGLE_EQ;  // X = 切换EQ
@@ -58,31 +54,8 @@ InputAction input_process(SDL_Event *event) {
         }
     }
     
-    // Also handle joystick events directly
-    if (event->type == SDL_JOYBUTTONDOWN) {
-        Uint8 btn = event->jbutton.button;
-        switch (btn) {
-            case 0: return ACTION_SELECT;     // A
-            case 1: return ACTION_BACK;       // B
-            case 2: return ACTION_NEXT;       // X
-            case 3: return ACTION_PREV;       // Y
-            case 4: return ACTION_VOL_DOWN;   // L1
-            case 5: return ACTION_VOL_UP;     // R1
-            case 6: return ACTION_SEEK_BACKWARD; // L2
-            case 7: return ACTION_SEEK_FORWARD;  // R2
-            case 8: return ACTION_PLAY_PAUSE; // Select
-            case 9: return ACTION_TOGGLE_VIEW; // Start
-            default: return ACTION_NONE;
-        }
-    }
-    
-    if (event->type == SDL_JOYHATMOTION) {
-        Uint8 hat = event->jhat.value;
-        if (hat & SDL_HAT_UP) return ACTION_UP;
-        if (hat & SDL_HAT_DOWN) return ACTION_DOWN;
-        if (hat & SDL_HAT_LEFT) return ACTION_LEFT;
-        if (hat & SDL_HAT_RIGHT) return ACTION_RIGHT;
-    }
+    // Joystick events are handled by gptokeyb (converted to keyboard)
+    // Direct joystick handling disabled to avoid conflicts
     
     return ACTION_NONE;
 }
