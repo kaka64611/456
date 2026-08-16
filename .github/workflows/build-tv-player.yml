@@ -10,24 +10,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup arm64 multiarch
+      - name: Setup arm64 cross-compile
         run: |
           sudo dpkg --add-architecture arm64
-          # Replace security.ubuntu.com with ports.ubuntu.com for arm64
-          sudo sed -i 's|http://security.ubuntu.com/ubuntu|http://ports.ubuntu.com/ubuntu-ports|g' /etc/apt/sources.list
-          sudo sed -i 's|http://archive.ubuntu.com/ubuntu|http://ports.ubuntu.com/ubuntu-ports|g' /etc/apt/sources.list
-          # Add arm64 specific sources
-          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy main universe multiverse" | sudo tee -a /etc/apt/sources.list
-          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-updates main universe multiverse" | sudo tee -a /etc/apt/sources.list
-          sudo apt-get update || true
+          # Keep amd64 sources, add arm64 ports sources
+          sudo bash -c 'cat >> /etc/apt/sources.list.d/arm64-cross.list << EOF
+          deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy main universe multiverse
+          deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-updates main universe multiverse
+          deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-security main universe multiverse
+          EOF'
+          # Configure apt to not fail on missing arch for security.ubuntu.com
+          echo 'APT::Architectures "amd64,arm64";' | sudo tee /etc/apt/apt.conf.d/00architectures
+          sudo apt-get update 2>&1 | tail -5 || true
 
       - name: Install toolchain and libs
         run: |
           sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
-          sudo apt-get install -y libsdl2-dev:arm64 libsdl2-ttf-dev:arm64 libmpv-dev:arm64 || true
-          # Verify libmpv headers
-          ls /usr/include/mpv/ || echo "mpv headers not found, using fallback"
-          ls /usr/lib/aarch64-linux-gnu/libmpv* || echo "libmpv not found"
+          sudo apt-get install -y libsdl2-dev:arm64 libsdl2-ttf-dev:arm64 libmpv-dev:arm64
+          echo "=== Verify headers ==="
+          ls /usr/include/mpv/client.h 2>/dev/null && echo "mpv headers OK" || echo "mpv headers MISSING"
+          ls /usr/include/SDL2/SDL.h 2>/dev/null && echo "SDL2 headers OK" || echo "SDL2 headers MISSING"
+          echo "=== Verify libs ==="
+          ls /usr/lib/aarch64-linux-gnu/libmpv.so* 2>/dev/null && echo "libmpv OK" || echo "libmpv MISSING"
+          ls /usr/lib/aarch64-linux-gnu/libSDL2.so* 2>/dev/null && echo "libSDL2 OK" || echo "libSDL2 MISSING"
 
       - name: Build for AArch64
         run: |
