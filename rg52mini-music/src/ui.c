@@ -53,36 +53,47 @@ void ui_draw_rounded_rect(SDL_Renderer *r, int x, int y,
 
 // Format time as MM:SS
 
-// Draw panel with unified background, border and subtle highlight (glass effect)
+// Draw panel with shadow, rounded corners and subtle inner highlight
 static void ui_draw_gradient_panel(SDL_Renderer *r, int x, int y, int w, int h, int radius, Theme *t) {
     (void)radius;
     SDL_SetRenderDrawBlendMode(r, SDL_BLENDMODE_BLEND);
     
-    // Unified semi-transparent background (dark glass)
-    SDL_SetRenderDrawColor(r, t->panel_r, t->panel_g, t->panel_b, 210);
-    SDL_Rect bg = { x + 1, y + 1, w - 2, h - 2 };
+    // Outer shadow (4 layers)
+    for (int s = 0; s < 4; s++) {
+        int alpha = 50 - s * 12;
+        SDL_SetRenderDrawColor(r, 0, 0, 0, alpha);
+        SDL_Rect sh = { x - s, y - s + 2, w + s*2, h + s*2 };
+        SDL_RenderFillRect(r, &sh);
+    }
+    
+    // Main panel background - solid with slight variation
+    SDL_SetRenderDrawColor(r, t->panel_r, t->panel_g, t->panel_b, 235);
+    SDL_Rect bg = { x, y, w, h };
     SDL_RenderFillRect(r, &bg);
     
-    // Top highlight line (glass reflection)
-    SDL_SetRenderDrawColor(r, t->panel_r + 30, t->panel_g + 30, t->panel_b + 35, 120);
-    SDL_Rect top_hl = { x + 2, y + 2, w - 4, 1 };
+    // Subtle top inner highlight
+    SDL_SetRenderDrawColor(r, t->panel_r + 25, t->panel_g + 25, t->panel_b + 30, 60);
+    SDL_Rect top_hl = { x + 1, y + 1, w - 2, 2 };
     SDL_RenderFillRect(r, &top_hl);
     
-    // Bottom shadow line
-    SDL_SetRenderDrawColor(r, 0, 0, 0, 80);
-    SDL_Rect bottom_sh = { x + 2, y + h - 3, w - 4, 1 };
+    // Subtle bottom inner shadow
+    SDL_SetRenderDrawColor(r, 0, 0, 0, 40);
+    SDL_Rect bottom_sh = { x + 1, y + h - 3, w - 2, 2 };
     SDL_RenderFillRect(r, &bottom_sh);
     
-    // Border (subtle accent)
-    SDL_SetRenderDrawColor(r, t->accent_r, t->accent_g, t->accent_b, 60);
-    SDL_Rect border_top = { x, y, w, 1 };
-    SDL_Rect border_bottom = { x, y + h - 1, w, 1 };
-    SDL_Rect border_left = { x, y, 1, h };
-    SDL_Rect border_right = { x + w - 1, y, 1, h };
-    SDL_RenderFillRect(r, &border_top);
-    SDL_RenderFillRect(r, &border_bottom);
-    SDL_RenderFillRect(r, &border_left);
-    SDL_RenderFillRect(r, &border_right);
+    // Border accent line (top)
+    SDL_SetRenderDrawColor(r, t->accent_r, t->accent_g, t->accent_b, 100);
+    SDL_Rect accent_top = { x, y, w, 1 };
+    SDL_RenderFillRect(r, &accent_top);
+    
+    // Border (other sides, subtle)
+    SDL_SetRenderDrawColor(r, t->panel_r - 20, t->panel_g - 20, t->panel_b - 20, 180);
+    SDL_Rect border_l = { x, y + 1, 1, h - 1 };
+    SDL_Rect border_r = { x + w - 1, y + 1, 1, h - 1 };
+    SDL_Rect border_b = { x, y + h - 1, w, 1 };
+    SDL_RenderFillRect(r, &border_l);
+    SDL_RenderFillRect(r, &border_r);
+    SDL_RenderFillRect(r, &border_b);
 }
 
 // Draw gradient bar (for spectrum and progress)
@@ -188,7 +199,7 @@ void ui_draw_top_bar(SDL_Renderer *r, PlayerState *player,
 // Draw main area (LEFT: spectrum/lyrics, RIGHT: playlist) - AiMusic style
 void ui_draw_main_area(SDL_Renderer *r, Playlist *pl,
     int selected, int scroll, int panel_mode, Lyrics *lyrics,
-    Spectrum *spec, PlayerState *player,
+    Spectrum *spec, PlayerState *player, SDL_Texture *cover,
     TTF_Font *font_small, TTF_Font *font_med, TTF_Font *font_large, Theme *t) {
     int top = t->top_bar_height;
     int bottom = 720 - t->bottom_bar_height;
@@ -282,8 +293,38 @@ void ui_draw_main_area(SDL_Renderer *r, Playlist *pl,
     } else {
         // Cover mode
         ui_render_text(r, font_med, "封面", left_x + 20, top + 15, accent);
-        ui_render_text_centered(r, font_med, "暂无封面",
-            left_x + left_w/2, top + main_h/2, dim);
+        if (cover) {
+            // Get texture size
+            int tw, th;
+            SDL_QueryTexture(cover, NULL, NULL, &tw, &th);
+            // Calculate display size (fit in panel, maintain aspect ratio)
+            int panel_w = left_w - 80;
+            int panel_h = main_h - 100;
+            float scale = (float)panel_w / tw;
+            if (scale * th > panel_h) scale = (float)panel_h / th;
+            int dw = (int)(tw * scale);
+            int dh = (int)(th * scale);
+            int dx = left_x + (left_w - dw) / 2;
+            int dy = top + 50 + (panel_h - dh) / 2;
+            // Draw shadow
+            SDL_SetRenderDrawBlendMode(r, SDL_BLENDMODE_BLEND);
+            SDL_SetRenderDrawColor(r, 0, 0, 0, 100);
+            SDL_Rect shadow = { dx + 4, dy + 4, dw, dh };
+            SDL_RenderFillRect(r, &shadow);
+            // Draw cover
+            SDL_Rect cover_rect = { dx, dy, dw, dh };
+            SDL_RenderCopy(r, cover, NULL, &cover_rect);
+            // Border
+            SDL_SetRenderDrawColor(r, t->accent_r, t->accent_g, t->accent_b, 150);
+            SDL_Rect border = { dx - 1, dy - 1, dw + 2, dh + 2 };
+            SDL_RenderDrawRect(r, &border);
+        } else {
+            ui_render_text_centered(r, font_med, "暂无封面",
+                left_x + left_w/2, top + main_h/2, dim);
+            ui_render_text_centered(r, font_small,
+                "将封面图片(jpg/png)与音乐放在同一目录",
+                left_x + left_w/2, top + main_h/2 + 40, dim);
+        }
     }
     
     // === RIGHT panel: Playlist (AiMusic style) ===

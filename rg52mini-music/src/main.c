@@ -59,9 +59,65 @@ typedef struct {
     int theme_index;      // 褰撳墠涓婚绱㈠紩
     int eq_enabled;       // EQ
     int volume_show_timer; // Volume bar display timer
+    SDL_Texture *cover_texture; // Album cover
+    char cover_path[512]; // Current cover path
 } AppState;
 
 AppState *app = NULL;
+
+// Load cover image for a track (looks for same-name image or cover/folder.jpg)
+static void load_cover_for_track(const char *track_path) {
+    if (!app || !track_path || !app->renderer) return;
+    
+    // Avoid reloading same cover
+    if (app->cover_texture && app->cover_path[0] && 
+        strcmp(app->cover_path, track_path) == 0) return;
+    
+    // Free old cover
+    if (app->cover_texture) {
+        SDL_DestroyTexture(app->cover_texture);
+        app->cover_texture = NULL;
+    }
+    strncpy(app->cover_path, track_path, sizeof(app->cover_path) - 1);
+    
+    char dir[512];
+    char basename[256];
+    strncpy(dir, track_path, sizeof(dir) - 1);
+    char *slash = strrchr(dir, '/');
+    if (slash) {
+        *slash = '\0';
+        strncpy(basename, slash + 1, sizeof(basename) - 1);
+    } else {
+        strcpy(dir, ".");
+        strncpy(basename, track_path, sizeof(basename) - 1);
+    }
+    // Remove extension from basename
+    char *dot = strrchr(basename, '.');
+    if (dot) *dot = '\0';
+    
+    // Candidate cover paths
+    char candidates[8][512];
+    int ncand = 0;
+    snprintf(candidates[ncand++], sizeof(candidates[0]), "%s/%s.jpg", dir, basename);
+    snprintf(candidates[ncand++], sizeof(candidates[0]), "%s/%s.png", dir, basename);
+    snprintf(candidates[ncand++], sizeof(candidates[0]), "%s/cover.jpg", dir);
+    snprintf(candidates[ncand++], sizeof(candidates[0]), "%s/folder.jpg", dir);
+    snprintf(candidates[ncand++], sizeof(candidates[0]), "%s/AlbumArt.jpg", dir);
+    snprintf(candidates[ncand++], sizeof(candidates[0]), "%s/cover.png", dir);
+    
+    for (int i = 0; i < ncand; i++) {
+        SDL_Surface *surf = IMG_Load(candidates[i]);
+        if (surf) {
+            app->cover_texture = SDL_CreateTextureFromSurface(app->renderer, surf);
+            SDL_FreeSurface(surf);
+            if (app->cover_texture) {
+                printf("Loaded cover: %s\n", candidates[i]);
+                return;
+            }
+        }
+    }
+    printf("No cover found for: %s\n", track_path);
+}
 
 // Initialize SDL and app state
 int app_init(const char *music_dir) {
@@ -165,6 +221,7 @@ int app_init(const char *music_dir) {
     if (app->playlist->count > 0) {
         player_play(app->player, app->playlist->items[0].path);
         lyrics_load_for_track(app->lyrics, app->playlist->items[0].path);
+        load_cover_for_track(app->playlist->items[0].path);
     }
     
     return 0;
@@ -225,6 +282,7 @@ void handle_input(SDL_Event *event) {
                         app->playlist->items[app->selected_index].path);
                     lyrics_load_for_track(app->lyrics,
                         app->playlist->items[app->selected_index].path);
+                    load_cover_for_track(app->playlist->items[app->selected_index].path);
                 }
             }
             break;
@@ -237,6 +295,7 @@ void handle_input(SDL_Event *event) {
                     strcmp(player_current_track(app->player), app->playlist->items[app->selected_index].path) != 0) {
                     player_play(app->player, app->playlist->items[app->selected_index].path);
                     lyrics_load_for_track(app->lyrics, app->playlist->items[app->selected_index].path);
+                    load_cover_for_track(app->playlist->items[app->selected_index].path);
                 }
             }
             break;
@@ -247,14 +306,14 @@ void handle_input(SDL_Event *event) {
             player_next(app->player, app->playlist);
             {
                 const char *cur = player_current_track(app->player);
-                if (cur) lyrics_load_for_track(app->lyrics, cur);
+                if (cur) { lyrics_load_for_track(app->lyrics, cur); load_cover_for_track(cur); }
             }
             break;
         case ACTION_PREV:
             player_prev(app->player, app->playlist);
             {
                 const char *cur = player_current_track(app->player);
-                if (cur) lyrics_load_for_track(app->lyrics, cur);
+                if (cur) { lyrics_load_for_track(app->lyrics, cur); load_cover_for_track(cur); }
             }
             break;
         case ACTION_TOGGLE_EQ:
@@ -335,7 +394,8 @@ void render() {
     // Draw main area (left playlist + right spectrum/lyrics)
     ui_draw_main_area(r, app->playlist, app->selected_index,
         app->list_scroll, app->right_panel_mode, app->lyrics,
-        app->spectrum, app->player, app->font_small, app->font_medium, app->font_large, t);
+        app->spectrum, app->player, app->cover_texture,
+        app->font_small, app->font_medium, app->font_large, t);
     
     // Draw bottom bar
     ui_draw_bottom_bar(r, app->right_panel_mode, app->player,
@@ -374,7 +434,7 @@ void update() {
     if (player_track_finished(app->player)) {
         player_next(app->player, app->playlist);
         const char *cur = player_current_track(app->player);
-        if (cur) lyrics_load_for_track(app->lyrics, cur);
+        if (cur) { lyrics_load_for_track(app->lyrics, cur); load_cover_for_track(cur); }
     }
     
     // Update selected index to match current track only if not manually navigating

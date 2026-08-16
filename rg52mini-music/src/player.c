@@ -31,7 +31,7 @@ static PlayerState *g_player = NULL;
 static EQState *g_eq = NULL;
 static volatile int g_music_finished_flag = 0;
 
-// Postmix callback: captures real mixed audio for spectrum
+// Postmix callback: captures real mixed audio for spectrum and applies EQ
 static void postmix_callback(void *udata, Uint8 *stream, int len) {
     (void)udata;
     if (!g_player || !stream || len <= 0) return;
@@ -42,7 +42,15 @@ static void postmix_callback(void *udata, Uint8 *stream, int len) {
     // Apply EQ first (modifies stream in-place)
     if (g_eq && g_eq->enabled) {
         eq_process_short(g_eq, samples, frame_count, 2);
+        // Extra make-up gain to make EQ effect more audible
+        for (int i = 0; i < frame_count * 2; i++) {
+            int v = (int)samples[i] * 13 / 10; // +2.4dB make-up gain
+            if (v > 32767) v = 32767;
+            if (v < -32768) v = -32768;
+            samples[i] = (short)v;
+        }
     }
+    
     for (int i = 0; i < frame_count; i++) {
         // Mix left and right channels to mono for spectrum
         short left = samples[i * 2];

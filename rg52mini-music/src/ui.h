@@ -16,7 +16,7 @@ void ui_draw_top_bar(SDL_Renderer *r, PlayerState *player,
 // Draw main area (left playlist + right spectrum/lyrics)
 void ui_draw_main_area(SDL_Renderer *r, Playlist *pl,
     int selected, int scroll, int panel_mode, Lyrics *lyrics,
-    Spectrum *spec, PlayerState *player,
+    Spectrum *spec, PlayerState *player, SDL_Texture *cover,
     TTF_Font *font_small, TTF_Font *font_med, TTF_Font *font_large, Theme *t);
 
 // Draw bottom bar (mode switch + status)
