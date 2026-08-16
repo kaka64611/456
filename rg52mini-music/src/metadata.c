@@ -117,24 +117,8 @@ int metadata_extract_mp3_cover(const char *mp3_path, const char *output_path) {
 }
 
 double metadata_get_duration(const char *music_path) {
-    if (!music_path) return 0;
-    
-    Mix_Music *music = Mix_LoadMUS(music_path);
-    if (!music) {
-        fprintf(stderr, "Failed to load for duration: %s: %s\n", music_path, Mix_GetError());
-        return 0;
-    }
-    
-    double duration = 0;
-    
-    // Play briefly, seek to end, get position
-    if (Mix_PlayMusic(music, 0) == 0) {
-        Mix_SetMusicPosition(99999.0);
-        SDL_Delay(100); // Wait for seek to complete
-        duration = Mix_GetMusicPosition(music);
-        Mix_HaltMusic();
-    }
-    
-    Mix_FreeMusic(music);
-    return duration > 0 ? duration : 0;
+    (void)music_path;
+    // Duration获取暂时禁用，避免SDL_mixer版本兼容问题
+    // 播放时会自动跟踪时长
+    return 0;
 }
