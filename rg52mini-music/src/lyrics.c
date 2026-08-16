@@ -119,6 +119,11 @@ int lyrics_load_for_track(Lyrics *l, const char *track_path) {
     }
     fclose(f);
     
+    printf("Lyrics: loaded %d lines from %s\n", l->count, lrc_path);
+    for (int i = 0; i < l->count && i < 5; i++) {
+        printf("  [%d] %.1f: %s\n", i, l->lines[i].time, l->lines[i].text);
+    }
+    
     // Sort by time
     for (int i = 0; i < l->count - 1; i++) {
         for (int j = i + 1; j < l->count; j++) {
@@ -135,6 +140,12 @@ int lyrics_load_for_track(Lyrics *l, const char *track_path) {
 
 void lyrics_update(Lyrics *l, double position) {
     if (!l || l->count == 0) return;
+    
+    static double last_log = 0;
+    if (position - last_log > 5.0) {
+        printf("Lyrics: pos=%.1f count=%d cur=%d\n", position, l->count, l->current_index);
+        last_log = position;
+    }
     
     // Find current lyric line
     int idx = 0;

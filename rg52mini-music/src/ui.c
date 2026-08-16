@@ -128,29 +128,11 @@ void ui_draw_top_bar(SDL_Renderer *r, PlayerState *player,
         ui_render_text(r, font_large, "未播放", 820, 25, dim);
     }
     
-    // Time + progress bar + duration (full width at bottom of top bar)
-    char timebuf[32], durbuf[32];
+    // Time display only (no progress bar per user request)
+    char timebuf[32];
     double pos = player_get_position(player);
-    double dur = player_get_duration(player);
     format_time(pos, timebuf, sizeof(timebuf));
-    if (dur > 0) {
-        format_time(dur, durbuf, sizeof(durbuf));
-    } else {
-        strcpy(durbuf, "--:--");
-    }
-    // Time labels
-    ui_render_text(r, font_med, timebuf, 820, 68, dim);
-    ui_render_text(r, font_med, durbuf, 1190, 68, dim);
-    // Progress bar (full width under song info)
-    SDL_SetRenderDrawColor(r, t->panel_r, t->panel_g, t->panel_b, 200);
-    SDL_Rect pb_bg = { 820, 78, 440, 5 };
-    SDL_RenderFillRect(r, &pb_bg);
-    double ratio = (dur > 0.1) ? (pos / dur) : 0;
-    if (ratio > 1.0) ratio = 1.0;
-    if (ratio < 0) ratio = 0;
-    SDL_SetRenderDrawColor(r, t->accent_r, t->accent_g, t->accent_b, 255);
-    SDL_Rect pb_fg = { 820, 78, (int)(440 * ratio), 5 };
-    SDL_RenderFillRect(r, &pb_fg);
+    ui_render_text(r, font_med, timebuf, 1150, 55, dim);
 }
 
 // Draw main area (LEFT: spectrum/lyrics, RIGHT: playlist) - AiMusic style
