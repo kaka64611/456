@@ -75,7 +75,10 @@ static int app_init(const char *tv_dir) {
     app->channels = playlist_create();
     int count = playlist_load_directory(app->channels, tv_dir);
     if (count <= 0) {
-        // Try default path
+        // Try alternative paths (case-insensitive fallback)
+        count = playlist_load_directory(app->channels, "/roms/tv");
+    }
+    if (count <= 0) {
         count = playlist_load_directory(app->channels, "/roms/TV");
     }
     printf("Loaded %d channels total\n", app->channels->count);
@@ -253,7 +256,7 @@ static void render(void) {
 }
 
 int main(int argc, char *argv[]) {
-    const char *tv_dir = "/roms/TV";
+    const char *tv_dir = "/roms/tv";
 
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-d") == 0 && i + 1 < argc) {
