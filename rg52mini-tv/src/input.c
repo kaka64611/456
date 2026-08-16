@@ -45,8 +45,8 @@ InputAction input_process(SDL_Event *event) {
                 return ACTION_TOGGLE_PANEL;  // Start
             case 14: return ACTION_UP;        // D-pad Up
             case 15: return ACTION_DOWN;      // D-pad Down
-            case 16: return ACTION_LEFT;      // D-pad Left
-            case 17: return ACTION_RIGHT;     // D-pad Right
+            case 16: return ACTION_VOL_DOWN;  // D-pad Left = Vol down
+            case 17: return ACTION_VOL_UP;    // D-pad Right = Vol up
             default:
                 printf("JOY unhandled button: %d\n", btn);
                 return ACTION_NONE;

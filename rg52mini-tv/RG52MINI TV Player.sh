@@ -9,8 +9,8 @@ if [ ! -f /etc/ssl/certs/ca-certificates.crt ]; then
 fi
 
 # Paths
-PORT_DIR=/storage/roms/ports/rg52mini-tv
-TV_DIR=/storage/roms/TV
+PORT_DIR=/roms/ports/rg52mini-tv
+TV_DIR=/roms/TV
 LOGFILE=$PORT_DIR/debug.log
 
 # Create directories

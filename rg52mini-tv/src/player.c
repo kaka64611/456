@@ -48,8 +48,9 @@ TVPlayer* player_create(void) {
         return NULL;
     }
 
-    // Configure mpv
+    // Configure mpv for EmuELEC DRM/KMS environment
     p->mpv_set_option_string(p->mpv, "vo", "gpu");
+    p->mpv_set_option_string(p->mpv, "gpu-context", "drm");
     p->mpv_set_option_string(p->mpv, "hwdec", "auto");
     p->mpv_set_option_string(p->mpv, "ao", "alsa");
     p->mpv_set_option_string(p->mpv, "cache", "yes");
@@ -57,6 +58,9 @@ TVPlayer* player_create(void) {
     p->mpv_set_option_string(p->mpv, "network-timeout", "30");
     p->mpv_set_option_string(p->mpv, "terminal", "no");
     p->mpv_set_option_string(p->mpv, "msg-level", "all=error");
+    p->mpv_set_option_string(p->mpv, "drm-connector", "auto");
+    p->mpv_set_option_string(p->mpv, "video-sync", "audio");
+    p->mpv_set_option_string(p->mpv, "audio-device", "alsa/plughw:0,0");
 
     if (p->mpv_initialize(p->mpv) < 0) {
         fprintf(stderr, "Failed to initialize mpv\n");
