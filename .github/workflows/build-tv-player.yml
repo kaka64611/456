@@ -67,7 +67,13 @@ jobs:
         # Copy SDL2 and SDL2_ttf libs
         cp /usr/lib/aarch64-linux-gnu/libSDL2-2.0.so.0 rg52mini-tv/libs/ 2>/dev/null || true
         cp /usr/lib/aarch64-linux-gnu/libSDL2_ttf-2.0.so.0 rg52mini-tv/libs/ 2>/dev/null || true
-        sudo apt install -y libsamplerate0:arm64 2>/dev/null || true
+        # Copy ALL dependency libs to avoid missing libs
+        sudo apt install -y libsamplerate0:arm64 libxss1:arm64 2>/dev/null || true
+        for lib in $(ldd rg52mini-tv/rg52mini-tv 2>/dev/null | awk '{print $3}' | grep '^/'); do
+          cp ` rg52mini-tv/libs/ 2>/dev/null || true
+        done
+        # Also copy common X11/SDL deps
+        cp /usr/lib/aarch64-linux-gnu/libXss.so.1 rg52mini-tv/libs/ 2>/dev/null || true
         cp /usr/lib/aarch64-linux-gnu/libsamplerate.so.0 rg52mini-tv/libs/ 2>/dev/null || true
         cp -r rg52mini-tv/libs package/ports/rg52mini-tv/
         cp rg52mini-tv/RG52MINI\ TV\ Player.sh package/ports_scripts/
