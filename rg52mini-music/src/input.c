@@ -70,6 +70,9 @@ InputAction input_process(SDL_Event *event) {
     // Joystick hat (D-pad)
     if (event->type == SDL_JOYHATMOTION) {
         Uint8 hat = event->jhat.value;
+        printf("JOY hat value: %d (up=%d down=%d left=%d right=%d)\n",
+            hat, !!(hat&SDL_HAT_UP), !!(hat&SDL_HAT_DOWN),
+            !!(hat&SDL_HAT_LEFT), !!(hat&SDL_HAT_RIGHT));
         if (hat & SDL_HAT_UP) return ACTION_UP;
         if (hat & SDL_HAT_DOWN) return ACTION_DOWN;
         if (hat & SDL_HAT_LEFT) return ACTION_VOL_DOWN;

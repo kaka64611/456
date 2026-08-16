@@ -1,4 +1,4 @@
-﻿#include "ui.h"
+#include "ui.h"
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
@@ -84,14 +84,26 @@ void ui_draw_top_bar(SDL_Renderer *r, PlayerState *player,
     ui_render_text(r, font_med, mode_buf, 30, 18, accent);
     ui_render_text(r, font_med, eq_buf, 30, 45, dim);
     
-    // Volume bar
-    int vol = player_get_volume(player);
-    SDL_SetRenderDrawColor(r, 60, 80, 100, 255);
-    SDL_Rect vol_bg = { 30, 55, 150, 8 };
-    SDL_RenderFillRect(r, &vol_bg);
-    SDL_SetRenderDrawColor(r, t->accent_r, t->accent_g, t->accent_b, 255);
-    SDL_Rect vol_fg = { 30, 55, 150 * vol / 100, 8 };
-    SDL_RenderFillRect(r, &vol_fg);
+    // Volume bar (floating, only shows when adjusting)
+    if (volume_show > 0) {
+        int vol = player_get_volume(player);
+        int vw = 400, vh = 24;
+        int vx = (1280 - vw) / 2;
+        int vy = 720 - 80;
+        SDL_SetRenderDrawBlendMode(r, SDL_BLENDMODE_BLEND);
+        SDL_SetRenderDrawColor(r, 0, 0, 0, 180);
+        SDL_Rect vol_box = { vx - 10, vy - 10, vw + 20, vh + 30 };
+        SDL_RenderFillRect(r, &vol_box);
+        SDL_SetRenderDrawColor(r, 60, 60, 60, 255);
+        SDL_Rect vol_bg = { vx, vy, vw, vh };
+        SDL_RenderFillRect(r, &vol_bg);
+        SDL_SetRenderDrawColor(r, t->accent_r, t->accent_g, t->accent_b, 255);
+        SDL_Rect vol_fg = { vx, vy, vw * vol / 100, vh };
+        SDL_RenderFillRect(r, &vol_fg);
+        char vol_buf[32];
+        snprintf(vol_buf, sizeof(vol_buf), "音量 %d%%", vol);
+        ui_render_text_centered(r, font_med, vol_buf, 640, vy + vh + 2, (SDL_Color){255,255,255,255});
+    }
     
     // Center: playback controls (circles)
     int cx = 640, cy = h/2;
