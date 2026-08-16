@@ -1,117 +1,159 @@
 #include "player.h"
-#include <mpv/client.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <dlfcn.h>
 
-struct PlayerState {
-    mpv_handle *mpv;
-    int volume;
-    int is_playing;
-    char error[256];
-};
+#define LIBMPV_PATH "libmpv.so.2"
 
-PlayerState *player_init(void) {
-    PlayerState *p = (PlayerState *)calloc(1, sizeof(PlayerState));
+TVPlayer* player_create(void) {
+    TVPlayer *p = calloc(1, sizeof(TVPlayer));
     if (!p) return NULL;
 
-    p->mpv = mpv_create();
-    if (!p->mpv) {
-        strcpy(p->error, "Failed to create mpv handle");
-        return p;
+    // Dynamically load libmpv
+    p->lib_handle = dlopen(LIBMPV_PATH, RTLD_NOW | RTLD_GLOBAL);
+    if (!p->lib_handle) {
+        fprintf(stderr, "Failed to load %s: %s\n", LIBMPV_PATH, dlerror());
+        free(p);
+        return NULL;
     }
 
-    // Set mpv options for embedded/headless playback
-    mpv_set_option_string(p->mpv, "vo", "drm");
-    mpv_set_option_string(p->mpv, "hwdec", "auto");
-    mpv_set_option_string(p->mpv, "ao", "alsa");
-    mpv_set_option_string(p->mpv, "volume", "70");
-    mpv_set_option_string(p->mpv, "terminal", "no");
-    mpv_set_option_string(p->mpv, "msg-level", "all=no");
-    mpv_set_option_string(p->mpv, "cache", "yes");
-    mpv_set_option_string(p->mpv, "cache-secs", "10");
-    mpv_set_option_string(p->mpv, "network-timeout", "10");
-    mpv_set_option_string(p->mpv, "reconnect-on-timeout", "yes");
-    mpv_set_option_string(p->mpv, "reconnect-on-error", "yes");
+    // Load function pointers
+    p->mpv_create = dlsym(p->lib_handle, "mpv_create");
+    p->mpv_initialize = dlsym(p->lib_handle, "mpv_initialize");
+    p->mpv_command = dlsym(p->lib_handle, "mpv_command");
+    p->mpv_set_option_string = dlsym(p->lib_handle, "mpv_set_option_string");
+    p->mpv_set_property_string = dlsym(p->lib_handle, "mpv_set_property_string");
+    p->mpv_get_property_string = dlsym(p->lib_handle, "mpv_get_property_string");
+    p->mpv_free = dlsym(p->lib_handle, "mpv_free");
+    p->mpv_wait_event = dlsym(p->lib_handle, "mpv_wait_event");
+    p->mpv_terminate_destroy = dlsym(p->lib_handle, "mpv_terminate_destroy");
 
-    if (mpv_initialize(p->mpv) < 0) {
-        strcpy(p->error, "Failed to initialize mpv");
-        return p;
+    if (!p->mpv_create || !p->mpv_initialize || !p->mpv_command ||
+        !p->mpv_set_option_string || !p->mpv_set_property_string ||
+        !p->mpv_get_property_string || !p->mpv_free || !p->mpv_wait_event ||
+        !p->mpv_terminate_destroy) {
+        fprintf(stderr, "Failed to load mpv functions: %s\n", dlerror());
+        dlclose(p->lib_handle);
+        free(p);
+        return NULL;
+    }
+
+    // Create mpv instance
+    p->mpv = p->mpv_create();
+    if (!p->mpv) {
+        fprintf(stderr, "Failed to create mpv instance\n");
+        dlclose(p->lib_handle);
+        free(p);
+        return NULL;
+    }
+
+    // Configure mpv
+    p->mpv_set_option_string(p->mpv, "vo", "gpu");
+    p->mpv_set_option_string(p->mpv, "hwdec", "auto");
+    p->mpv_set_option_string(p->mpv, "ao", "alsa");
+    p->mpv_set_option_string(p->mpv, "cache", "yes");
+    p->mpv_set_option_string(p->mpv, "cache-secs", "10");
+    p->mpv_set_option_string(p->mpv, "network-timeout", "30");
+    p->mpv_set_option_string(p->mpv, "terminal", "no");
+    p->mpv_set_option_string(p->mpv, "msg-level", "all=error");
+
+    if (p->mpv_initialize(p->mpv) < 0) {
+        fprintf(stderr, "Failed to initialize mpv\n");
+        p->mpv_terminate_destroy(p->mpv);
+        dlclose(p->lib_handle);
+        free(p);
+        return NULL;
     }
 
     p->volume = 70;
-    p->is_playing = 0;
-    printf("mpv initialized\n");
+    p->is_playing = false;
+    p->current_url[0] = '\0';
+
     return p;
 }
 
-void player_destroy(PlayerState *p) {
+void player_destroy(TVPlayer *p) {
     if (!p) return;
     if (p->mpv) {
-        mpv_terminate_destroy(p->mpv);
+        p->mpv_terminate_destroy(p->mpv);
+    }
+    if (p->lib_handle) {
+        dlclose(p->lib_handle);
     }
     free(p);
 }
 
-int player_play(PlayerState *p, const char *url) {
-    if (!p || !p->mpv || !url) return -1;
+bool player_load(TVPlayer *p, const char *url) {
+    if (!p || !p->mpv || !url) return false;
 
-    printf("Playing: %s\n", url);
-
-    const char *cmd[] = {"loadfile", url, NULL};
-    int ret = mpv_command(p->mpv, cmd);
+    const char *args[] = {"loadfile", url, NULL};
+    int ret = p->mpv_command(p->mpv, args);
     if (ret < 0) {
-        snprintf(p->error, sizeof(p->error), "Failed to load: %s", mpv_error_string(ret));
-        printf("mpv error: %s\n", p->error);
-        p->is_playing = 0;
-        return -1;
+        fprintf(stderr, "Failed to load %s: error %d\n", url, ret);
+        return false;
     }
 
-    p->is_playing = 1;
-    return 0;
+    strncpy(p->current_url, url, sizeof(p->current_url) - 1);
+    p->is_playing = true;
+
+    // Set volume
+    char vol_str[16];
+    snprintf(vol_str, sizeof(vol_str), "%d", p->volume);
+    p->mpv_set_property_string(p->mpv, "volume", vol_str);
+
+    return true;
 }
 
-void player_stop(PlayerState *p) {
+void player_stop(TVPlayer *p) {
     if (!p || !p->mpv) return;
-    const char *cmd[] = {"stop", NULL};
-    mpv_command(p->mpv, cmd);
-    p->is_playing = 0;
+    const char *args[] = {"stop", NULL};
+    p->mpv_command(p->mpv, args);
+    p->is_playing = false;
 }
 
-void player_set_volume(PlayerState *p, int volume) {
+void player_set_volume(TVPlayer *p, int volume) {
     if (!p || !p->mpv) return;
     if (volume < 0) volume = 0;
     if (volume > 100) volume = 100;
     p->volume = volume;
-    char buf[16];
-    snprintf(buf, sizeof(buf), "%d", volume);
-    mpv_set_property_string(p->mpv, "volume", buf);
+    char vol_str[16];
+    snprintf(vol_str, sizeof(vol_str), "%d", volume);
+    p->mpv_set_property_string(p->mpv, "volume", vol_str);
 }
 
-int player_get_volume(PlayerState *p) {
-    return p ? p->volume : 0;
+int player_get_volume(TVPlayer *p) {
+    if (!p) return 0;
+    return p->volume;
 }
 
-int player_is_playing(PlayerState *p) {
-    return p ? p->is_playing : 0;
+bool player_is_playing(TVPlayer *p) {
+    if (!p) return false;
+    return p->is_playing;
 }
 
-const char *player_get_error(PlayerState *p) {
-    return p ? p->error : NULL;
-}
-
-void player_poll_events(PlayerState *p) {
+void player_poll_events(TVPlayer *p) {
     if (!p || !p->mpv) return;
+
     while (1) {
-        mpv_event *event = mpv_wait_event(p->mpv, 0);
-        if (event->event_id == MPV_EVENT_NONE) break;
-        if (event->event_id == MPV_EVENT_END_FILE) {
-            p->is_playing = 0;
-            printf("Playback ended\n");
-        }
-        if (event->event_id == MPV_EVENT_FILE_LOADED) {
-            p->is_playing = 1;
-            printf("File loaded\n");
+        mpv_event *event = p->mpv_wait_event(p->mpv, 0);
+        if (!event || event->event_id == MPV_EVENT_NONE) break;
+
+        switch (event->event_id) {
+            case MPV_EVENT_SHUTDOWN:
+                p->is_playing = false;
+                break;
+            case MPV_EVENT_END_FILE:
+                p->is_playing = false;
+                break;
+            case MPV_EVENT_IDLE:
+                p->is_playing = false;
+                break;
+            case MPV_EVENT_FILE_LOADED:
+                p->is_playing = true;
+                break;
+            default:
+                break;
         }
     }
 }
