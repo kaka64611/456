@@ -37,8 +37,8 @@ InputAction input_process(SDL_Event *event) {
         switch (btn) {
             case 0: return ACTION_PLAY;        // A = Play
             case 1: return ACTION_PAUSE;       // B = Pause
-            case 2: return ACTION_TOGGLE_EQ;   // X = EQ preset
-            case 3: return ACTION_PLAY_MODE;   // Y = Play mode
+            case 2: printf("JOY X -> EQ\n"); return ACTION_TOGGLE_EQ;   // X = EQ preset
+            case 3: printf("JOY Y -> MODE\n"); return ACTION_PLAY_MODE;   // Y = Play mode
             case 4: return ACTION_PREV;        // L1 alt
             case 5: return ACTION_NEXT;        // R1 alt
             case 6: return ACTION_THEME_PREV;  // L2 alt
@@ -91,10 +91,8 @@ InputAction input_process(SDL_Event *event) {
             case SDLK_b:     return ACTION_PAUSE;
             case SDLK_x:     return ACTION_TOGGLE_EQ;
             case SDLK_y:     return ACTION_PLAY_MODE;
-            case SDLK_l:     return ACTION_PREV;
-            case SDLK_r:     return ACTION_NEXT;
-            case SDLK_o:     return ACTION_THEME_PREV;
-            case SDLK_p:     return ACTION_THEME_NEXT;
+            // l/r/o/p removed - shoulder buttons handled by joystick events only
+            // This prevents gptokeyb dpad mapping from triggering theme switch
             case SDLK_RETURN:
             case SDLK_KP_ENTER:
                 if (alt) return ACTION_QUIT;
