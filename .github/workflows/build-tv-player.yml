@@ -1,4 +1,4 @@
-name: Build RG52MINI TV Player (AArch64)
+﻿name: Build RG52MINI TV Player (AArch64)
 
 on:
   push:
@@ -64,6 +64,9 @@ jobs:
         mkdir -p package/ports_scripts
         cp rg52mini-tv/rg52mini-tv package/ports/rg52mini-tv/
         cp rg52mini-tv/assets/fonts/NotoSansCJKsc-Regular.otf package/ports/rg52mini-tv/assets/fonts/
+        # Copy SDL2 and SDL2_ttf libs
+        cp /usr/lib/aarch64-linux-gnu/libSDL2-2.0.so.0 rg52mini-tv/libs/ 2>/dev/null || true
+        cp /usr/lib/aarch64-linux-gnu/libSDL2_ttf-2.0.so.0 rg52mini-tv/libs/ 2>/dev/null || true
         cp -r rg52mini-tv/libs package/ports/rg52mini-tv/
         cp rg52mini-tv/RG52MINI\ TV\ Player.sh package/ports_scripts/
         cp rg52mini-tv/使用说明.txt package/
