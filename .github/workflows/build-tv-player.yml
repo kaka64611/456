@@ -28,15 +28,16 @@ jobs:
         echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-security main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list
         sudo apt update
         sudo apt install -y libsdl2-dev:arm64 libsdl2-ttf-dev:arm64
-        echo "=== Verify SDL2 headers ==="
-        ls /usr/include/SDL2/SDL.h && echo "SDL2 headers OK"
-        ls /usr/lib/aarch64-linux-gnu/libSDL2.so && echo "libSDL2 OK"
 
     - name: Prepare libmpv for linking
       run: |
         cd rg52mini-tv/libs
         ln -sf libmpv.so.2 libmpv.so
-        ls -la libmpv*
+        # Create symlinks for all ffmpeg libs
+        for f in libavcodec.so.60 libavformat.so.60 libavutil.so.58 libswscale.so.7 libswresample.so.4 libavfilter.so.9 libpostproc.so.57 libavdevice.so.60; do
+          [ -f "$f" ] && ln -sf $f ${f%.so.*}.so
+        done
+        ls *.so | head -20
 
     - name: Build for AArch64
       run: |
@@ -50,7 +51,8 @@ jobs:
         done
         echo "Linking..."
         aarch64-linux-gnu-gcc -O2 -Llibs -L/usr/lib/aarch64-linux-gnu -o rg52mini-tv obj/*.o \
-          -lmpv -lSDL2 -lSDL2_ttf -lpthread -lm || exit 1
+          -lmpv -lavcodec -lavformat -lavutil -lswscale -lswresample -lavfilter -lpostproc \
+          -lSDL2 -lSDL2_ttf -lpthread -lm -ldl || exit 1
         file rg52mini-tv
         echo "=== Build success ==="
 
