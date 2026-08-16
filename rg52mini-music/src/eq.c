@@ -139,12 +139,12 @@ static const char *preset_names[EQ_PRESET_COUNT] = {
 };
 
 static const float preset_gains[EQ_PRESET_COUNT][EQ_BANDS] = {
-    { 0,  0,  0,  0,  0},  // Flat
-    {-2,  3,  6,  6, -2},  // Pop (enhanced)
-    { 9,  6,  0,  3,  6},  // Dance (enhanced bass + treble)
-    { 4,  3,  0,  3, -2},  // Jazz
-    { 8,  5, -2,  3,  6},  // Rock (enhanced bass + treble)
-    { 6,  4,  0,  3,  6},  // Classical
+    { 0,   0,  0,  0,  0},   // Flat
+    {-3,   4,  8,  8, -3},   // Pop (strong mid/treble)
+    {12,   8,  0,  4,  8},   // Dance (heavy bass + treble)
+    { 5,   4,  0,  4, -2},   // Jazz
+    {10,   6, -3,  4,  8},   // Rock (heavy bass + treble, cut mid)
+    { 8,   5,  0,  4,  8},   // Classical
 };
 
 const char *eq_get_preset_name(int index) {

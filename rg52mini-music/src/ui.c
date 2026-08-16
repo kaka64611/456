@@ -53,32 +53,36 @@ void ui_draw_rounded_rect(SDL_Renderer *r, int x, int y,
 
 // Format time as MM:SS
 
-// Draw vertical gradient rectangle (glass panel effect)
+// Draw panel with unified background, border and subtle highlight (glass effect)
 static void ui_draw_gradient_panel(SDL_Renderer *r, int x, int y, int w, int h, int radius, Theme *t) {
-    // Base fill
+    (void)radius;
     SDL_SetRenderDrawBlendMode(r, SDL_BLENDMODE_BLEND);
-    // Top gradient (lighter)
-    for (int i = 0; i < h / 2; i++) {
-        int alpha = 200 - (i * 100 / (h / 2));
-        if (alpha < 140) alpha = 140;
-        SDL_SetRenderDrawColor(r, t->panel_r + 15, t->panel_g + 15, t->panel_b + 20, alpha);
-        SDL_Rect line = { x + 2, y + i, w - 4, 1 };
-        SDL_RenderFillRect(r, &line);
-    }
-    // Bottom gradient (darker)
-    for (int i = h / 2; i < h; i++) {
-        int alpha = 140 + ((i - h/2) * 60 / (h/2));
-        if (alpha > 200) alpha = 200;
-        SDL_SetRenderDrawColor(r, t->panel_r - 5, t->panel_g - 5, t->panel_b - 5, alpha);
-        SDL_Rect line = { x + 2, y + i, w - 4, 1 };
-        SDL_RenderFillRect(r, &line);
-    }
-    // Border (glow effect)
-    SDL_SetRenderDrawColor(r, t->accent_r, t->accent_g, t->accent_b, 80);
-    SDL_Rect border = { x, y, w, 2 };
-    SDL_RenderFillRect(r, &border);
-    // Rounded corners simulation
-    ui_draw_rounded_rect(r, x, y, w, h, radius, (SDL_Color){t->panel_r, t->panel_g, t->panel_b, 0});
+    
+    // Unified semi-transparent background (dark glass)
+    SDL_SetRenderDrawColor(r, t->panel_r, t->panel_g, t->panel_b, 210);
+    SDL_Rect bg = { x + 1, y + 1, w - 2, h - 2 };
+    SDL_RenderFillRect(r, &bg);
+    
+    // Top highlight line (glass reflection)
+    SDL_SetRenderDrawColor(r, t->panel_r + 30, t->panel_g + 30, t->panel_b + 35, 120);
+    SDL_Rect top_hl = { x + 2, y + 2, w - 4, 1 };
+    SDL_RenderFillRect(r, &top_hl);
+    
+    // Bottom shadow line
+    SDL_SetRenderDrawColor(r, 0, 0, 0, 80);
+    SDL_Rect bottom_sh = { x + 2, y + h - 3, w - 4, 1 };
+    SDL_RenderFillRect(r, &bottom_sh);
+    
+    // Border (subtle accent)
+    SDL_SetRenderDrawColor(r, t->accent_r, t->accent_g, t->accent_b, 60);
+    SDL_Rect border_top = { x, y, w, 1 };
+    SDL_Rect border_bottom = { x, y + h - 1, w, 1 };
+    SDL_Rect border_left = { x, y, 1, h };
+    SDL_Rect border_right = { x + w - 1, y, 1, h };
+    SDL_RenderFillRect(r, &border_top);
+    SDL_RenderFillRect(r, &border_bottom);
+    SDL_RenderFillRect(r, &border_left);
+    SDL_RenderFillRect(r, &border_right);
 }
 
 // Draw gradient bar (for spectrum and progress)

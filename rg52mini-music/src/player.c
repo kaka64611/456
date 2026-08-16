@@ -29,6 +29,7 @@ struct PlayerState {
 // Global pointer for postmix callback (SDL_mixer callback doesn't pass userdata reliably)
 static PlayerState *g_player = NULL;
 static EQState *g_eq = NULL;
+static volatile int g_music_finished_flag = 0;
 
 // Postmix callback: captures real mixed audio for spectrum
 static void postmix_callback(void *udata, Uint8 *stream, int len) {
@@ -57,7 +58,10 @@ static void postmix_callback(void *udata, Uint8 *stream, int len) {
 }
 
 static void music_finished_hook() {
-    // This will be handled in update() via Mix_PlayingMusic check
+    g_music_finished_flag = 1;
+    if (g_player) {
+        g_player->track_finished = 1;
+    }
 }
 
 PlayerState *player_init(void) {
@@ -145,6 +149,7 @@ int player_play(PlayerState *p, const char *path) {
     p->is_playing = 1;
     p->is_paused = 0;
     p->track_finished = 0;
+    g_music_finished_flag = 0;
     p->position = 0;
     p->start_tick = SDL_GetTicks();
     
@@ -254,14 +259,15 @@ void player_prev(PlayerState *p, Playlist *pl) {
 
 int player_track_finished(PlayerState *p) {
     if (!p || !p->music) return 0;
-    // Check flag set by player_update()
-    if (p->track_finished) {
+    // Check SDL_mixer finished callback flag (most reliable)
+    if (g_music_finished_flag || p->track_finished) {
+        g_music_finished_flag = 0;
+        p->track_finished = 0;
         p->is_playing = 0;
         return 1;
     }
-    // Also direct check in case update wasn't called
+    // Fallback: direct check
     if (!Mix_PlayingMusic() && p->is_playing && !p->is_paused) {
-        p->track_finished = 1;
         p->is_playing = 0;
         return 1;
     }
