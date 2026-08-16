@@ -288,10 +288,12 @@ void handle_input(SDL_Event *event) {
         case ACTION_VOL_UP:
             player_set_volume(app->player, 
                 player_get_volume(app->player) + 10);
+            app->volume_show_timer = 120;
             break;
         case ACTION_VOL_DOWN:
             player_set_volume(app->player, 
                 player_get_volume(app->player) - 10);
+            app->volume_show_timer = 120;
             break;
         case ACTION_SEEK_FORWARD:
             player_seek(app->player, 5);
@@ -347,6 +349,7 @@ void render() {
 void update() {
     // Update player state
     player_update(app->player);
+    if (app->volume_show_timer > 0) app->volume_show_timer--;
     
     // Update spectrum with audio data
     if (app->spectrum && player_is_playing(app->player)) {
