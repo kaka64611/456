@@ -33,11 +33,12 @@ jobs:
       run: |
         cd rg52mini-tv/libs
         ln -sf libmpv.so.2 libmpv.so
-        # Create symlinks for all ffmpeg libs
-        for f in libavcodec.so.60 libavformat.so.60 libavutil.so.58 libswscale.so.7 libswresample.so.4 libavfilter.so.9 libpostproc.so.57 libavdevice.so.60; do
-          [ -f "$f" ] && ln -sf $f ${f%.so.*}.so
+        # Create symlinks for all libs
+        for f in *.so.*; do
+          base=$(echo $f | sed 's/\.so\..*/.so/')
+          [ -f "$f" ] && [ ! -f "$base" ] && ln -sf $f $base
         done
-        ls *.so | head -20
+        ls *.so | wc -l
 
     - name: Build for AArch64
       run: |
@@ -50,9 +51,15 @@ jobs:
             -I/usr/include/SDL2 -Iinclude -c -o obj/$(basename $f .c).o $f || exit 1
         done
         echo "Linking..."
-        aarch64-linux-gnu-gcc -O2 -Llibs -L/usr/lib/aarch64-linux-gnu -o rg52mini-tv obj/*.o \
-          -lmpv -lavcodec -lavformat -lavutil -lswscale -lswresample -lavfilter -lpostproc \
-          -lSDL2 -lSDL2_ttf -lpthread -lm -ldl || exit 1
+        # Link with all libs in libs dir, allow undefined symbols in shared libs
+        EXTRA_LIBS=""
+        for f in libs/*.so; do
+          libname=$(basename $f .so)
+          EXTRA_LIBS="$EXTRA_LIBS -l$libname"
+        done
+        aarch64-linux-gnu-gcc -O2 -Llibs -L/usr/lib/aarch64-linux-gnu \
+          -Wl,--allow-shlib-undefined -o rg52mini-tv obj/*.o \
+          $EXTRA_LIBS -lSDL2 -lSDL2_ttf -lpthread -lm -ldl || exit 1
         file rg52mini-tv
         echo "=== Build success ==="
 
