@@ -1,7 +1,11 @@
-﻿name: Build RG52MINI TV Player (AArch64)
+name: Build RG52MINI TV Player (AArch64)
 
 on:
   push:
+    branches: [ main ]
+    paths:
+      - 'rg52mini-tv/**'
+      - '.github/workflows/build-tv-player.yml'
   workflow_dispatch:
 
 permissions:
@@ -17,7 +21,7 @@ jobs:
     - name: Install AArch64 cross-compiler
       run: |
         sudo apt update
-        sudo apt install -y build-essential gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+        sudo apt install -y build-essential gcc-aarch64-linux-gnu g++-aarch64-linux-gnu pkg-config
 
     - name: Setup arm64 apt and install SDL2 dev libs
       run: |
@@ -28,29 +32,30 @@ jobs:
         echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-security main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list
         sudo apt update
         sudo apt install -y libsdl2-dev:arm64 libsdl2-ttf-dev:arm64
-        echo "=== SDL2 headers ==="
-        ls /usr/include/SDL2/SDL.h
-        echo "=== SDL2 libs ==="
-        ls /usr/lib/aarch64-linux-gnu/libSDL2*
 
     - name: Build for AArch64
+      env:
+        CC: aarch64-linux-gnu-gcc
+        PKG_CONFIG_PATH: /usr/lib/aarch64-linux-gnu/pkgconfig
       run: |
         cd rg52mini-tv
-        set -x
         mkdir -p obj
-        # Compile each file individually to see errors
+        SDL_CFLAGS=$(pkg-config --cflags sdl2 SDL2_ttf)
+        SDL_LIBS=$(pkg-config --libs sdl2 SDL2_ttf)
+        echo "SDL_CFLAGS: $SDL_CFLAGS"
+        echo "SDL_LIBS: $SDL_LIBS"
         for f in src/*.c; do
           echo "=== Compiling $f ==="
           aarch64-linux-gnu-gcc -O2 -Wall -Wextra -std=c11 -D_GNU_SOURCE -D_REENTRANT \
-            -I/usr/include/SDL2 -Iinclude -c -o obj/$(basename $f .c).o $f 2>&1
+            $SDL_CFLAGS -Iinclude -c -o obj/$(basename $f .c).o $f 2>&1
           if [ $? -ne 0 ]; then
             echo "FAILED: $f"
             exit 1
           fi
         done
         echo "=== Linking ==="
-        aarch64-linux-gnu-gcc -O2 -L/usr/lib/aarch64-linux-gnu -o rg52mini-tv obj/*.o \
-          -lSDL2 -lSDL2_ttf -lpthread -lm -ldl 2>&1
+        aarch64-linux-gnu-gcc -O2 -o rg52mini-tv obj/*.o \
+          $SDL_LIBS -lpthread -lm -ldl 2>&1
         if [ $? -ne 0 ]; then
           echo "LINK FAILED"
           exit 1
@@ -64,19 +69,8 @@ jobs:
         mkdir -p package/ports_scripts
         cp rg52mini-tv/rg52mini-tv package/ports/rg52mini-tv/
         cp rg52mini-tv/assets/fonts/NotoSansCJKsc-Regular.otf package/ports/rg52mini-tv/assets/fonts/
-        # Copy SDL2 and SDL2_ttf libs
-        cp /usr/lib/aarch64-linux-gnu/libSDL2-2.0.so.0 rg52mini-tv/libs/ 2>/dev/null || true
-        cp /usr/lib/aarch64-linux-gnu/libSDL2_ttf-2.0.so.0 rg52mini-tv/libs/ 2>/dev/null || true
-        # Copy ALL dependency libs to avoid missing libs
-        sudo apt install -y libsamplerate0:arm64 libxss1:arm64 2>/dev/null || true
-        for lib in $(ldd rg52mini-tv/rg52mini-tv 2>/dev/null | awk '{print $3}' | grep '^/'); do
-          cp ` rg52mini-tv/libs/ 2>/dev/null || true
-        done
-        # Also copy common X11/SDL deps
-        cp /usr/lib/aarch64-linux-gnu/libXss.so.1 rg52mini-tv/libs/ 2>/dev/null || true
-        cp /usr/lib/aarch64-linux-gnu/libsamplerate.so.0 rg52mini-tv/libs/ 2>/dev/null || true
         cp -r rg52mini-tv/libs package/ports/rg52mini-tv/
-        cp rg52mini-tv/RG52MINI\ TV\ Player.sh package/ports_scripts/
+        cp "rg52mini-tv/RG52MINI TV Player.sh" package/ports_scripts/
         cp rg52mini-tv/使用说明.txt package/
         cd package && zip -r ../rg52mini-tv-ee47.zip .
 
@@ -99,5 +93,6 @@ jobs:
         git config user.name "rg52mini-tv"
         git config user.email "rg52mini@example.com"
         git add bin/rg52mini-tv
-        git commit -m "Build: rg52mini-tv AArch64 binary" || echo "No changes to commit"
-        git push
+        git commit -m "Build: rg52mini-tv AArch64 binary (pkg-config)" || echo "No changes to commit"
+        git pull --rebase origin main || true
+        git push || echo "Push failed"
