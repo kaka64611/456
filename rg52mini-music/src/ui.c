@@ -369,6 +369,20 @@ void ui_draw_main_area(SDL_Renderer *r, Playlist *pl,
         ui_render_text(r, font_small, pl->items[idx].title, right_x + 25, y + 8,
             idx == selected ? accent : text_color);
         
+        // Track duration (right-aligned)
+        if (pl->items[idx].duration > 0) {
+            char dur_str[16];
+            int mins = pl->items[idx].duration / 60;
+            int secs = pl->items[idx].duration % 60;
+            snprintf(dur_str, sizeof(dur_str), "%d:%02d", mins, secs);
+            // Measure text width for right alignment
+            int tw, th;
+            TTF_SizeText(font_small, dur_str, &tw, &th);
+            ui_render_text(r, font_small, dur_str,
+                right_x + right_w - 30 - tw, y + 8,
+                idx == selected ? accent : dim);
+        }
+        
         
         // Playing indicator
         const char *cur = player_current_track(player);

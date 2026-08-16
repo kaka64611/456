@@ -22,6 +22,7 @@
 #include "lyrics.h"
 #include "spectrum.h"
 #include "eq.h"
+#include "metadata.h"
 
 #define SCREEN_WIDTH  1280
 #define SCREEN_HEIGHT 720
@@ -96,8 +97,17 @@ static void load_cover_for_track(const char *track_path) {
     if (dot) *dot = '\0';
     
     // Candidate cover paths
-    char candidates[8][512];
+    char candidates[10][512];
     int ncand = 0;
+    
+    // First try: extract embedded cover from MP3
+    char tmp_cover[512];
+    snprintf(tmp_cover, sizeof(tmp_cover), "/tmp/cover_%d.jpg", (int)getpid());
+    if (metadata_extract_mp3_cover(track_path, tmp_cover)) {
+        snprintf(candidates[ncand++], sizeof(candidates[0]), "%s", tmp_cover);
+    }
+    
+    // Then try: same-name image in directory
     snprintf(candidates[ncand++], sizeof(candidates[0]), "%s/%s.jpg", dir, basename);
     snprintf(candidates[ncand++], sizeof(candidates[0]), "%s/%s.png", dir, basename);
     snprintf(candidates[ncand++], sizeof(candidates[0]), "%s/cover.jpg", dir);
@@ -179,6 +189,14 @@ int app_init(const char *music_dir) {
     // Load music from directory
     if (music_dir) {
         playlist_scan_directory(app->playlist, music_dir);
+    }
+    
+    // Get duration for each track
+    for (int i = 0; i < app->playlist->count; i++) {
+        if (app->playlist->items[i].duration == 0) {
+            double dur = metadata_get_duration(app->playlist->items[i].path);
+            app->playlist->items[i].duration = (int)dur;
+        }
     }
     
     // Initialize theme
