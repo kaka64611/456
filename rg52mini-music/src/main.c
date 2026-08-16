@@ -196,6 +196,8 @@ int app_init(const char *music_dir) {
         if (app->playlist->items[i].duration == 0) {
             double dur = metadata_get_duration(app->playlist->items[i].path);
             app->playlist->items[i].duration = (int)dur;
+            fprintf(stderr, "Track %d: %s -> duration %.0f sec\n", i,
+                app->playlist->items[i].title, dur);
         }
     }
     

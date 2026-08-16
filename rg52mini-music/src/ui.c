@@ -375,12 +375,16 @@ void ui_draw_main_area(SDL_Renderer *r, Playlist *pl,
             int mins = pl->items[idx].duration / 60;
             int secs = pl->items[idx].duration % 60;
             snprintf(dur_str, sizeof(dur_str), "%d:%02d", mins, secs);
-            // Measure text width for right alignment
-            int tw, th;
-            TTF_SizeText(font_small, dur_str, &tw, &th);
+            // Manual width calculation (digits ~10px each, colon ~8px)
+            int tw = 0;
+            for (const char *p = dur_str; *p; p++) tw += (*p == ':') ? 8 : 10;
             ui_render_text(r, font_small, dur_str,
-                right_x + right_w - 30 - tw, y + 8,
-                idx == selected ? accent : dim);
+                right_x + right_w - 35 - tw, y + 8,
+                idx == selected ? accent : text_color);
+        } else {
+            // Show placeholder for tracks without duration
+            ui_render_text(r, font_small, "--:--",
+                right_x + right_w - 35 - 38, y + 8, dim);
         }
         
         
