@@ -1,4 +1,4 @@
-﻿/*
+/*
  * RG52MINI Music Player - A custom music player for Anbernic RG52MINI
  * Based on SDL2, inspired by AiMusic UI layout
  * Screen: 1280x720, AArch64, EmuELEC 4.7
@@ -57,7 +57,8 @@ typedef struct {
     int show_help;
     int play_mode;        // 0=椤哄簭, 1=寰幆, 2=闅忔満
     int theme_index;      // 褰撳墠涓婚绱㈠紩
-    int eq_enabled;       // EQ寮€鍏?
+    int eq_enabled;       // EQ
+    int volume_show_timer; // Volume bar display timer
 } AppState;
 
 AppState *app = NULL;
