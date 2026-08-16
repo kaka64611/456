@@ -134,8 +134,8 @@ void ui_draw_top_bar(SDL_Renderer *r, PlayerState *player,
     double dur = player_get_duration(player);
     format_time(pos, timebuf, sizeof(timebuf));
     format_time(dur > 0 ? dur : pos, durbuf, sizeof(durbuf));
-    ui_render_text(r, font_small, timebuf, 820, 70, dim);
-    ui_render_text(r, font_small, durbuf, 1200, 70, dim);
+    ui_render_text(r, font_med, timebuf, 820, 70, dim);
+    ui_render_text(r, font_med, durbuf, 1200, 70, dim);
     // Progress bar
     SDL_SetRenderDrawColor(r, 60, 80, 100, 255);
     SDL_Rect pb_bg = { 870, 73, 320, 6 };
