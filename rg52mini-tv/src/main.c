@@ -23,7 +23,7 @@ typedef struct {
     SDL_Window *window;
     SDL_Renderer *renderer;
     ChannelList *channels;
-    PlayerState *player;
+    TVPlayer *player;
     Theme *theme;
     ViewMode view;
     int selected;
@@ -81,7 +81,7 @@ static int app_init(const char *tv_dir) {
     printf("Loaded %d channels total\n", app->channels->count);
 
     // Init player
-    app->player = player_init();
+    app->player = player_create();
     app->volume = 70;
     app->view = VIEW_LIST;
     app->selected = 0;
@@ -113,12 +113,12 @@ static void play_selected(void) {
     app->view = VIEW_LOADING;
     app->error_msg[0] = '\0';
 
-    if (player_play(app->player, ch->url) == 0) {
+    if (player_load(app->player, ch->url)) {
         app->view = VIEW_PLAYING;
         app->show_overlay = 1;
         app->overlay_timer = 180; // 3 seconds
     } else {
-        strncpy(app->error_msg, player_get_error(app->player), sizeof(app->error_msg)-1);
+        strncpy(app->error_msg, "Failed to load channel", sizeof(app->error_msg)-1);
         app->view = VIEW_ERROR;
     }
 }
@@ -220,12 +220,8 @@ static void update(void) {
 
     // Check if playback ended
     if (app->view == VIEW_PLAYING && !player_is_playing(app->player)) {
-        // Could be error or stream ended
-        const char *err = player_get_error(app->player);
-        if (err && err[0]) {
-            strncpy(app->error_msg, err, sizeof(app->error_msg)-1);
-            app->view = VIEW_ERROR;
-        }
+        strncpy(app->error_msg, "Playback ended", sizeof(app->error_msg)-1);
+        app->view = VIEW_ERROR;
     }
 }
 
