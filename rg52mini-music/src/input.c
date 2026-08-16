@@ -32,13 +32,12 @@ InputAction input_process(SDL_Event *event) {
     // === Direct joystick button events (most reliable) ===
     if (event->type == SDL_JOYBUTTONDOWN) {
         Uint8 btn = event->jbutton.button;
-        printf("JOY button down: %d\n", btn);
         // Try standard mapping first, with fallbacks for X/Y
         switch (btn) {
             case 0: return ACTION_PLAY;        // A = Play
             case 1: return ACTION_PAUSE;       // B = Pause
-            case 2: printf("JOY X -> EQ\n"); return ACTION_TOGGLE_EQ;   // X = EQ preset
-            case 3: printf("JOY Y -> MODE\n"); return ACTION_PLAY_MODE;   // Y = Play mode
+            case 2: return ACTION_TOGGLE_EQ;   // X = EQ preset
+            case 3: return ACTION_PLAY_MODE;   // Y = Play mode
             case 4: return ACTION_PREV;        // L1 = Previous track
             case 5: return ACTION_NEXT;        // R1 = Next track
             case 6: return ACTION_THEME_PREV;  // L2 = Theme prev
@@ -52,10 +51,9 @@ InputAction input_process(SDL_Event *event) {
             // RG52MINI actual button mapping (from debug log)
             case 14: return ACTION_UP;         // D-pad Up = scroll up
             case 15: return ACTION_DOWN;       // D-pad Down = scroll down
-            case 16: printf("JOY btn16 -> VOL_DOWN\n"); return ACTION_VOL_DOWN;
-            case 17: printf("JOY btn17 -> VOL_UP\n"); return ACTION_VOL_UP;
+            case 16: return ACTION_VOL_DOWN;
+            case 17: return ACTION_VOL_UP;
             default:
-                printf("JOY unhandled button: %d\n", btn);
                 return ACTION_NONE;
         }
     }
@@ -70,9 +68,6 @@ InputAction input_process(SDL_Event *event) {
     // Joystick hat (D-pad)
     if (event->type == SDL_JOYHATMOTION) {
         Uint8 hat = event->jhat.value;
-        printf("JOY hat value: %d (up=%d down=%d left=%d right=%d)\n",
-            hat, !!(hat&SDL_HAT_UP), !!(hat&SDL_HAT_DOWN),
-            !!(hat&SDL_HAT_LEFT), !!(hat&SDL_HAT_RIGHT));
         if (hat & SDL_HAT_UP) return ACTION_UP;
         if (hat & SDL_HAT_DOWN) return ACTION_DOWN;
         if (hat & SDL_HAT_LEFT) return ACTION_VOL_DOWN;
