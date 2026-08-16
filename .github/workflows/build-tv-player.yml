@@ -19,7 +19,7 @@ jobs:
         sudo apt update
         sudo apt install -y build-essential gcc-aarch64-linux-gnu g++-aarch64-linux-gnu pkg-config
 
-    - name: Setup arm64 apt and install dev libs
+    - name: Setup arm64 apt and install SDL2 dev libs
       run: |
         sudo dpkg --add-architecture arm64
         sudo sed -i 's/^deb /deb [arch=amd64] /' /etc/apt/sources.list
@@ -27,10 +27,13 @@ jobs:
         echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list
         echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-security main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list
         sudo apt update
-        sudo apt install -y libsdl2-dev:arm64 libsdl2-ttf-dev:arm64 libmpv-dev:arm64
-        echo "=== Verify ==="
-        pkg-config --cflags --libs mpv sdl2 SDL2_ttf
-        ls /usr/include/mpv/client.h
+        sudo apt install -y libsdl2-dev:arm64 libsdl2-ttf-dev:arm64
+
+    - name: Prepare libmpv for linking
+      run: |
+        cd rg52mini-tv/libs
+        ln -sf libmpv.so.2 libmpv.so
+        ls -la libmpv*
 
     - name: Build for AArch64
       run: |

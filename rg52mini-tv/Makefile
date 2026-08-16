@@ -1,6 +1,7 @@
 CC = aarch64-linux-gnu-gcc
 CFLAGS = -O2 -Wall -Wextra -std=c11 -D_GNU_SOURCE -D_REENTRANT
-INCLUDES = -I/usr/include/SDL2
+INCLUDES = -I/usr/include/SDL2 -Iinclude
+LIBDIRS = -Llibs
 LIBS = -lmpv -lSDL2 -lSDL2_ttf -lpthread -lm
 
 SRCDIR = src
@@ -16,7 +17,7 @@ TARGET = $(BINDIR)/rg52mini-tv
 all: $(TARGET)
 
 $(TARGET): $(OBJECTS)
-	$(CC) $(CFLAGS) -o $@ $^ $(LIBS)
+	$(CC) $(CFLAGS) $(LIBDIRS) -o $@ $^ $(LIBS)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c | $(OBJDIR)
 	$(CC) $(CFLAGS) $(INCLUDES) -c -o $@ $<
