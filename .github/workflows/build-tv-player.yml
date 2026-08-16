@@ -10,36 +10,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup arm64 cross-compile
-        run: |
-          sudo dpkg --add-architecture arm64
-          # Keep amd64 sources, add arm64 ports sources
-          sudo bash -c 'cat >> /etc/apt/sources.list.d/arm64-cross.list << EOF
-          deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy main universe multiverse
-          deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-updates main universe multiverse
-          deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-security main universe multiverse
-          EOF'
-          # Configure apt to not fail on missing arch for security.ubuntu.com
-          echo 'APT::Architectures "amd64,arm64";' | sudo tee /etc/apt/apt.conf.d/00architectures
-          sudo apt-get update 2>&1 | tail -5 || true
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
-      - name: Install toolchain and libs
+      - name: Build in arm64 container
         run: |
-          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
-          sudo apt-get install -y libsdl2-dev:arm64 libsdl2-ttf-dev:arm64 libmpv-dev:arm64
-          echo "=== Verify headers ==="
-          ls /usr/include/mpv/client.h 2>/dev/null && echo "mpv headers OK" || echo "mpv headers MISSING"
-          ls /usr/include/SDL2/SDL.h 2>/dev/null && echo "SDL2 headers OK" || echo "SDL2 headers MISSING"
-          echo "=== Verify libs ==="
-          ls /usr/lib/aarch64-linux-gnu/libmpv.so* 2>/dev/null && echo "libmpv OK" || echo "libmpv MISSING"
-          ls /usr/lib/aarch64-linux-gnu/libSDL2.so* 2>/dev/null && echo "libSDL2 OK" || echo "libSDL2 MISSING"
-
-      - name: Build for AArch64
-        run: |
-          cd rg52mini-tv
-          make CC=aarch64-linux-gnu-gcc clean || true
-          make CC=aarch64-linux-gnu-gcc
-          file rg52mini-tv
+          docker run --rm -v $PWD:/work -w /work arm64v8/ubuntu:22.04 bash -c '
+            set -e
+            apt-get update
+            apt-get install -y gcc make libsdl2-dev libsdl2-ttf-dev libmpv-dev pkg-config file zip
+            echo "=== Verify ==="
+            pkg-config --cflags --libs mpv sdl2 SDL2_ttf
+            cd rg52mini-tv
+            make clean || true
+            make
+            file rg52mini-tv
+            echo "=== Build success ==="
+          '
 
       - name: Prepare package
         run: |
