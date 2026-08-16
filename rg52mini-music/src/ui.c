@@ -299,11 +299,25 @@ void ui_draw_main_area(SDL_Renderer *r, Playlist *pl,
         int idx = i + scroll;
         int y = start_y + i * item_h;
         
-        // Highlight selected
+        // Highlight selected (rounded glass effect)
         if (idx == selected) {
-            SDL_SetRenderDrawColor(r, sel_color.r, sel_color.g, sel_color.b, 180);
-            SDL_Rect sel = { right_x + 10, y - 2, right_w - 40, item_h - 4 };
-            SDL_RenderFillRect(r, &sel);
+            SDL_SetRenderDrawBlendMode(r, SDL_BLENDMODE_BLEND);
+            // Gradient highlight
+            for (int py = 0; py < item_h - 6; py++) {
+                int alpha = 160 - (py * 60 / (item_h - 6));
+                SDL_SetRenderDrawColor(r, t->accent_r, t->accent_g, t->accent_b, alpha);
+                SDL_Rect line = { right_x + 12, y - 1 + py, right_w - 44, 1 };
+                SDL_RenderFillRect(r, &line);
+            }
+            // Left accent bar
+            SDL_SetRenderDrawColor(r, t->accent_r, t->accent_g, t->accent_b, 255);
+            SDL_Rect accent_bar = { right_x + 12, y - 1, 3, item_h - 4 };
+            SDL_RenderFillRect(r, &accent_bar);
+        } else {
+            // Separator line
+            SDL_SetRenderDrawColor(r, t->text_dim_r, t->text_dim_g, t->text_dim_b, 40);
+            SDL_Rect sep = { right_x + 20, y + item_h - 2, right_w - 50, 1 };
+            SDL_RenderFillRect(r, &sep);
         }
         
         // Track name
@@ -314,7 +328,7 @@ void ui_draw_main_area(SDL_Renderer *r, Playlist *pl,
         // Playing indicator
         const char *cur = player_current_track(player);
         if (cur && strcmp(cur, pl->items[idx].path) == 0) {
-            ui_render_text(r, font_small, ">", right_x + 10, y + 8, accent);
+            filledCircleRGBA(r, right_x + 18, y + 18, 4, t->accent_r, t->accent_g, t->accent_b, 255);
         }
     }
 }

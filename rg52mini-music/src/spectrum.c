@@ -105,10 +105,23 @@ void spectrum_draw(Spectrum *s, SDL_Renderer *r,
         if (bar_h < 2) bar_h = 2;
         if (bar_h > h - 20) bar_h = h - 20;
         
-        // Gradient color (bottom bright, top dim)
+        // Gradient bar (bottom bright, top dim) - AiMusic style
+        for (int py = 0; py < bar_h; py++) {
+            int ratio = py * 255 / bar_h;
+            Uint8 cr = color.r - (color.r * ratio / 400);
+            Uint8 cg = color.g - (color.g * ratio / 400);
+            Uint8 cb = color.b - (color.b * ratio / 400);
+            if (cr < 40) cr = 40;
+            if (cg < 40) cg = 40;
+            if (cb < 60) cb = 60;
+            SDL_SetRenderDrawColor(r, cr, cg, cb, 255);
+            SDL_Rect line = { bx, base_y - bar_h + py, s->bar_width, 1 };
+            SDL_RenderFillRect(r, &line);
+        }
+        // Rounded top cap
         SDL_SetRenderDrawColor(r, color.r, color.g, color.b, 255);
-        SDL_Rect bar = { bx, base_y - bar_h, s->bar_width, bar_h };
-        SDL_RenderFillRect(r, &bar);
+        SDL_Rect cap = { bx, base_y - bar_h, s->bar_width, 2 };
+        SDL_RenderFillRect(r, &cap);
         
         // Peak indicator
         int peak_h = (int)(s->peaks[i] * (h - 20));
