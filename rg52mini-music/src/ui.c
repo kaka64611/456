@@ -60,7 +60,7 @@ static void format_time(double seconds, char *buf, int len) {
 
 // Draw top bar
 void ui_draw_top_bar(SDL_Renderer *r, PlayerState *player,
-    Playlist *pl, TTF_Font *font_med, TTF_Font *font_large, Theme *t, int eq_preset) {
+    Playlist *pl, TTF_Font *font_med, TTF_Font *font_large, Theme *t, int eq_preset, int volume_show) {
     int h = t->top_bar_height;
     SDL_Color text_color = { t->text_r, t->text_g, t->text_b, 255 };
     SDL_Color accent = { t->accent_r, t->accent_g, t->accent_b, 255 };
