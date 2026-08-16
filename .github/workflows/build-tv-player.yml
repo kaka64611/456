@@ -4,59 +4,70 @@ on:
   push:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-22.04
+
     steps:
-      - uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+    - name: Install AArch64 cross-compiler
+      run: |
+        sudo apt update
+        sudo apt install -y build-essential gcc-aarch64-linux-gnu g++-aarch64-linux-gnu pkg-config
 
-      - name: Build in arm64 container
-        run: |
-          docker run --rm -v $PWD:/work -w /work arm64v8/ubuntu:22.04 bash -c '
-            set -e
-            apt-get update
-            apt-get install -y gcc make libsdl2-dev libsdl2-ttf-dev libmpv-dev pkg-config file zip
-            echo "=== Verify ==="
-            pkg-config --cflags --libs mpv sdl2 SDL2_ttf
-            cd rg52mini-tv
-            make clean || true
-            make
-            file rg52mini-tv
-            echo "=== Build success ==="
-          '
+    - name: Setup arm64 apt and install dev libs
+      run: |
+        sudo dpkg --add-architecture arm64
+        sudo sed -i 's/^deb /deb [arch=amd64] /' /etc/apt/sources.list
+        echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list
+        echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list
+        echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-security main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list
+        sudo apt update
+        sudo apt install -y libsdl2-dev:arm64 libsdl2-ttf-dev:arm64 libmpv-dev:arm64
+        echo "=== Verify ==="
+        pkg-config --cflags --libs mpv sdl2 SDL2_ttf
+        ls /usr/include/mpv/client.h
 
-      - name: Prepare package
-        run: |
-          mkdir -p package/ports/rg52mini-tv/assets/fonts
-          mkdir -p package/ports_scripts
-          cp rg52mini-tv/rg52mini-tv package/ports/rg52mini-tv/
-          cp rg52mini-tv/assets/fonts/NotoSansCJKsc-Regular.otf package/ports/rg52mini-tv/assets/fonts/
-          cp -r rg52mini-tv/libs package/ports/rg52mini-tv/
-          cp rg52mini-tv/RG52MINI\ TV\ Player.sh package/ports_scripts/
-          cp rg52mini-tv/使用说明.txt package/
-          cd package && zip -r ../rg52mini-tv-ee47.zip .
+    - name: Build for AArch64
+      run: |
+        cd rg52mini-tv
+        make CC=aarch64-linux-gnu-gcc clean || true
+        make CC=aarch64-linux-gnu-gcc
+        file rg52mini-tv
 
-      - name: Upload binary
-        uses: actions/upload-artifact@v4
-        with:
-          name: rg52mini-tv-binary
-          path: rg52mini-tv/rg52mini-tv
+    - name: Prepare package
+      run: |
+        mkdir -p package/ports/rg52mini-tv/assets/fonts
+        mkdir -p package/ports_scripts
+        cp rg52mini-tv/rg52mini-tv package/ports/rg52mini-tv/
+        cp rg52mini-tv/assets/fonts/NotoSansCJKsc-Regular.otf package/ports/rg52mini-tv/assets/fonts/
+        cp -r rg52mini-tv/libs package/ports/rg52mini-tv/
+        cp rg52mini-tv/RG52MINI\ TV\ Player.sh package/ports_scripts/
+        cp rg52mini-tv/使用说明.txt package/
+        cd package && zip -r ../rg52mini-tv-ee47.zip .
 
-      - name: Upload package
-        uses: actions/upload-artifact@v4
-        with:
-          name: rg52mini-tv-package
-          path: rg52mini-tv-ee47.zip
+    - name: Upload binary
+      uses: actions/upload-artifact@v4
+      with:
+        name: rg52mini-tv-binary
+        path: rg52mini-tv/rg52mini-tv
 
-      - name: Commit binary to repo
-        run: |
-          mkdir -p bin
-          cp rg52mini-tv/rg52mini-tv bin/
-          git config user.name "rg52mini-tv"
-          git config user.email "rg52mini@example.com"
-          git add bin/rg52mini-tv
-          git commit -m "Build: rg52mini-tv AArch64 binary" || echo "No changes to commit"
-          git push
+    - name: Upload package
+      uses: actions/upload-artifact@v4
+      with:
+        name: rg52mini-tv-package
+        path: rg52mini-tv-ee47.zip
+
+    - name: Commit binary to repo
+      run: |
+        mkdir -p bin
+        cp rg52mini-tv/rg52mini-tv bin/
+        git config user.name "rg52mini-tv"
+        git config user.email "rg52mini@example.com"
+        git add bin/rg52mini-tv
+        git commit -m "Build: rg52mini-tv AArch64 binary" || echo "No changes to commit"
+        git push
