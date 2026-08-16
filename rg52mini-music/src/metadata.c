@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <SDL2/SDL.h>
 #include <SDL2/SDL_mixer.h>
 
 // Convert synchsafe integer (4 bytes, 7 bits each) to normal int
@@ -125,21 +127,10 @@ double metadata_get_duration(const char *music_path) {
     
     double duration = 0;
     
-    // Try Mix_GetMusicDuration (SDL2_mixer 2.6.0+)
-#ifdef MIX_MAJOR_VERSION
-    #if (MIX_MAJOR_VERSION > 2) || (MIX_MAJOR_VERSION == 2 && MIX_MINOR_VERSION >= 6)
-        duration = Mix_GetMusicDuration(music);
-        if (duration > 0) {
-            Mix_FreeMusic(music);
-            return duration;
-        }
-    #endif
-#endif
-    
-    // Fallback: seek to end and get position
+    // Play briefly, seek to end, get position
     if (Mix_PlayMusic(music, 0) == 0) {
         Mix_SetMusicPosition(99999.0);
-        SDL_Delay(50); // Wait for seek
+        SDL_Delay(100); // Wait for seek to complete
         duration = Mix_GetMusicPosition(music);
         Mix_HaltMusic();
     }
