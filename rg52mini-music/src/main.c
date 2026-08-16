@@ -141,6 +141,7 @@ int app_init(const char *music_dir) {
     app->eq = eq_init();
     eq_set_enabled(app->eq, 1);
     app->eq_enabled = 1;
+    player_set_eq(app->player, app->eq);
     
     // Input
     input_init();
@@ -151,6 +152,9 @@ int app_init(const char *music_dir) {
     app->list_scroll = 0;
     app->right_panel_mode = 1; // Start with spectrum
     app->show_help = 0;
+    
+    // Set initial play mode
+    player_set_play_mode(app->player, app->play_mode);
     
     // Auto-play first track if playlist not empty
     if (app->playlist->count > 0) {
@@ -241,9 +245,13 @@ void handle_input(SDL_Event *event) {
             player_prev(app->player, app->playlist);
             break;
         case ACTION_TOGGLE_EQ:
-            app->eq_enabled = !app->eq_enabled;
-            eq_set_enabled(app->eq, app->eq_enabled);
-            printf("EQ %s\n", app->eq_enabled ? "ON" : "OFF");
+            // X key: cycle through EQ presets
+            eq_set_enabled(app->eq, 1);
+            app->eq_enabled = 1;
+            int cur_preset = eq_get_current_preset(app->eq);
+            cur_preset = (cur_preset + 1) % EQ_PRESET_COUNT;
+            eq_apply_preset(app->eq, cur_preset);
+            printf("EQ Preset: %s\n", eq_get_preset_name(cur_preset));
             break;
         case ACTION_PLAY_MODE:
             app->play_mode = (app->play_mode + 1) % 3;

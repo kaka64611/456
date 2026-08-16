@@ -1,4 +1,5 @@
 #include "player.h"
+#include "eq.h"
 #include "playlist.h"
 #include <SDL2/SDL.h>
 #include <string.h>
@@ -25,6 +26,7 @@ struct PlayerState {
 
 // Global pointer for postmix callback (SDL_mixer callback doesn't pass userdata reliably)
 static PlayerState *g_player = NULL;
+static EQState *g_eq = NULL;
 
 // Postmix callback: captures real mixed audio for spectrum
 static void postmix_callback(void *udata, Uint8 *stream, int len) {
@@ -34,8 +36,12 @@ static void postmix_callback(void *udata, Uint8 *stream, int len) {
     short *samples = (short *)stream;
     int frame_count = len / 4; // 16-bit stereo = 4 bytes per frame
     
+    // Apply EQ first (modifies stream in-place)
+    if (g_eq && g_eq->enabled) {
+        eq_process_short(g_eq, samples, frame_count, 2);
+    }
     for (int i = 0; i < frame_count; i++) {
-        // Mix left and right channels to mono
+        // Mix left and right channels to mono for spectrum
         short left = samples[i * 2];
         short right = samples[i * 2 + 1];
         short mono = (short)(((int)left + (int)right) / 2);
@@ -57,6 +63,7 @@ PlayerState *player_init(void) {
     if (!p) return NULL;
     
     g_player = p;
+    g_eq = NULL;
     
     // Initialize SDL_mixer
     if (Mix_OpenAudio(44100, AUDIO_S16SYS, 2, 4096) < 0) {
@@ -72,8 +79,22 @@ PlayerState *player_init(void) {
     
     p->volume = 70;
     Mix_VolumeMusic(p->volume);
+    p->play_mode = 0; // 0=sequence, 1=repeat, 2=shuffle
     
     return p;
+}
+
+void player_set_eq(PlayerState *p, EQState *eq) {
+    (void)p;
+    g_eq = eq;
+}
+
+void player_set_play_mode(PlayerState *p, int mode) {
+    if (p) p->play_mode = mode;
+}
+
+int player_get_play_mode(PlayerState *p) {
+    return p ? p->play_mode : 0;
 }
 
 void player_free(PlayerState *p) {
@@ -101,7 +122,10 @@ int player_play(PlayerState *p, const char *path) {
     }
     
     strncpy(p->current_path, path, MAX_PATH_LEN - 1);
+    // Try to get real duration
     p->duration = 0;
+    double dur = Mix_MusicDuration(p->music);
+    if (dur > 0) p->duration = dur;
     // Reset audio ring buffer
     p->audio_write_pos = 0;
     p->audio_count = 0;
@@ -188,8 +212,27 @@ int player_get_volume(PlayerState *p) {
 
 void player_next(PlayerState *p, Playlist *pl) {
     if (!p || !pl || pl->count == 0) return;
-    int next = pl->current_index + 1;
-    if (next >= pl->count) next = 0;
+    int next;
+    if (p->play_mode == 2) {
+        // Shuffle: random track, avoid same if possible
+        next = rand() % pl->count;
+        if (pl->count > 1 && next == pl->current_index) {
+            next = (next + 1) % pl->count;
+        }
+    } else {
+        // Sequence or repeat: next track
+        next = pl->current_index + 1;
+        if (next >= pl->count) {
+            if (p->play_mode == 1) {
+                next = 0; // Repeat: loop back
+            } else {
+                // Sequence: stop at end
+                p->track_finished = 0;
+                p->is_playing = 0;
+                return;
+            }
+        }
+    }
     pl->current_index = next;
     player_play(p, pl->items[next].path);
 }
@@ -215,13 +258,14 @@ int player_track_finished(PlayerState *p) {
 void player_update(PlayerState *p) {
     if (!p) return;
     if (p->is_playing && !p->is_paused) {
-        // Actively update position from tick counter
-        p->position = (double)(SDL_GetTicks() - p->start_tick) / 1000.0;
-        if (p->position < 0) p->position = 0;
-        // Track max position as duration estimate
-        if (p->position > p->duration) {
-            p->duration = p->position;
+        // Use Mix_GetMusicPosition if available, fall back to tick counter
+        double mix_pos = Mix_GetMusicPosition();
+        if (mix_pos >= 0) {
+            p->position = mix_pos;
+        } else {
+            p->position = (double)(SDL_GetTicks() - p->start_tick) / 1000.0;
         }
+        if (p->position < 0) p->position = 0;
         // Check if music actually stopped (finished or error)
         if (!Mix_PlayingMusic() && !Mix_PausedMusic()) {
             p->track_finished = 1;

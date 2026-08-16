@@ -2,6 +2,7 @@
 #include <string.h>
 
 static SDL_Joystick *joystick = NULL;
+static int alt_held = 0; // Track Select (alt) key for combos
 
 void input_init(void) {
     // Joystick handled by gptokeyb, do not open directly
@@ -24,7 +25,13 @@ InputAction input_process(SDL_Event *event) {
     if (event->type == SDL_KEYDOWN) {
         SDL_Keycode key = event->key.keysym.sym;
         int mod = event->key.keysym.mod;
-        int alt = (mod & KMOD_ALT) != 0;
+        int alt = (mod & KMOD_ALT) != 0 || alt_held;
+        
+        // Track alt key state
+        if (key == SDLK_LALT || key == SDLK_RALT || key == SDLK_MODE) {
+            alt_held = 1;
+            return ACTION_NONE;
+        }
         
         switch (key) {
             case SDLK_UP:    return ACTION_UP;
@@ -51,6 +58,13 @@ InputAction input_process(SDL_Event *event) {
                 return ACTION_TOGGLE_PANEL;
             default:
                 return ACTION_NONE;
+        }
+    }
+    
+    if (event->type == SDL_KEYUP) {
+        SDL_Keycode key = event->key.keysym.sym;
+        if (key == SDLK_LALT || key == SDLK_RALT || key == SDLK_MODE) {
+            alt_held = 0;
         }
     }
     

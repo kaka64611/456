@@ -15,6 +15,7 @@ typedef struct {
 
 static BiQuad filters[EQ_BANDS];
 static int filters_initialized = 0;
+static int current_preset = 0;
 
 static void calc_biquad_peaking(BiQuad *f, float freq, float gain_db,
     float q, float sample_rate) {
@@ -89,6 +90,27 @@ void eq_set_enabled(EQState *eq, int enabled) {
     if (eq) eq->enabled = enabled;
 }
 
+void eq_process_short(EQState *eq, short *buffer, int samples, int channels) {
+    if (!eq || !eq->enabled || !filters_initialized || !buffer) return;
+    for (int i = 0; i < samples; i++) {
+        for (int ch = 0; ch < channels; ch++) {
+            float x = (float)buffer[i * channels + ch] / 32768.0f;
+            for (int b = 0; b < EQ_BANDS; b++) {
+                BiQuad *f = &filters[b];
+                float y = f->b0 * x + f->b1 * f->x1 + f->b2 * f->x2
+                        - f->a1 * f->y1 - f->a2 * f->y2;
+                f->x2 = f->x1; f->x1 = x;
+                f->y2 = f->y1; f->y1 = y;
+                x = y;
+            }
+            // Clamp and convert back
+            if (x > 1.0f) x = 1.0f;
+            if (x < -1.0f) x = -1.0f;
+            buffer[i * channels + ch] = (short)(x * 32767.0f);
+        }
+    }
+}
+
 void eq_process(EQState *eq, float *buffer, int samples,
     int channels, int sample_rate) {
     if (!eq || !eq->enabled || !filters_initialized) return;
@@ -109,4 +131,37 @@ void eq_process(EQState *eq, float *buffer, int samples,
             buffer[i * channels + ch] = x;
         }
     }
+}
+
+static const char *preset_names[EQ_PRESET_COUNT] = {
+    "Flat", "Pop", "Dance", "Jazz", "Rock", "Classical"
+};
+
+static const float preset_gains[EQ_PRESET_COUNT][EQ_BANDS] = {
+    { 0,  0,  0,  0,  0},  // Flat
+    {-1,  2,  4,  4, -1},  // Pop
+    { 6,  4,  0,  2,  4},  // Dance
+    { 3,  2,  0,  2, -1},  // Jazz
+    { 5,  3, -1,  2,  4},  // Rock
+    { 4,  3,  0,  2,  4},  // Classical
+};
+
+const char *eq_get_preset_name(int index) {
+    if (index < 0 || index >= EQ_PRESET_COUNT) return "Flat";
+    return preset_names[index];
+}
+
+void eq_apply_preset(EQState *eq, int preset) {
+    if (!eq || preset < 0 || preset >= EQ_PRESET_COUNT) return;
+    current_preset = preset;
+    for (int i = 0; i < EQ_BANDS; i++) {
+        eq->gains[i] = preset_gains[preset][i];
+        calc_biquad_peaking(&filters[i], eq->frequencies[i],
+            eq->gains[i], 1.0f, 44100.0f);
+    }
+}
+
+int eq_get_current_preset(EQState *eq) {
+    (void)eq;
+    return current_preset;
 }

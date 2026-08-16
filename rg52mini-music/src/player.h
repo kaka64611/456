@@ -3,6 +3,7 @@
 
 #include <SDL2/SDL_mixer.h>
 #include "playlist.h"
+#include "eq.h"
 
 typedef struct PlayerState PlayerState;
 
@@ -56,5 +57,14 @@ void player_update(PlayerState *p);
 
 // Get audio buffer for spectrum
 int player_get_audio_buffer(PlayerState *p, short *buffer, int samples);
+
+// Set EQ state for postmix processing
+void player_set_eq(PlayerState *p, EQState *eq);
+
+// Set play mode (0=sequence, 1=repeat, 2=shuffle)
+void player_set_play_mode(PlayerState *p, int mode);
+
+// Get play mode
+int player_get_play_mode(PlayerState *p);
 
 #endif

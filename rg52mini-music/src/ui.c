@@ -71,8 +71,8 @@ void ui_draw_top_bar(SDL_Renderer *r, PlayerState *player,
     ui_draw_rounded_rect(r, 10, 5, 1260, h - 10, 12, panel);
     
     // Left: mode indicators
-    ui_render_text(r, font_med, "Loop", 30, 20, accent);
-    ui_render_text(r, font_med, "EQ", 100, 20, dim);
+    ui_render_text(r, font_med, "循环", 30, 20, accent);
+    ui_render_text(r, font_med, "均衡", 100, 20, dim);
     
     // Volume bar
     int vol = player_get_volume(player);
@@ -123,28 +123,33 @@ void ui_draw_top_bar(SDL_Renderer *r, PlayerState *player,
         char title[256];
         playlist_get_display_name(current, title, sizeof(title));
         ui_render_text(r, font_large, title, 820, 15, text_color);
-        ui_render_text(r, font_med, "Unknown Artist", 820, 50, dim);
+        ui_render_text(r, font_med, "未知艺术家", 820, 50, dim);
     } else {
-        ui_render_text(r, font_large, "Not Playing", 820, 25, dim);
+        ui_render_text(r, font_large, "未播放", 820, 25, dim);
     }
     
-    // Time + progress bar + duration
+    // Time + progress bar + duration (full width at bottom of top bar)
     char timebuf[32], durbuf[32];
     double pos = player_get_position(player);
     double dur = player_get_duration(player);
     format_time(pos, timebuf, sizeof(timebuf));
-    format_time(dur > 0 ? dur : pos, durbuf, sizeof(durbuf));
-    ui_render_text(r, font_med, timebuf, 820, 70, dim);
-    ui_render_text(r, font_med, durbuf, 1200, 70, dim);
-    // Progress bar
-    SDL_SetRenderDrawColor(r, 60, 80, 100, 255);
-    SDL_Rect pb_bg = { 870, 73, 320, 6 };
+    if (dur > 0) {
+        format_time(dur, durbuf, sizeof(durbuf));
+    } else {
+        strcpy(durbuf, "--:--");
+    }
+    // Time labels
+    ui_render_text(r, font_small, timebuf, 820, 68, dim);
+    ui_render_text(r, font_small, durbuf, 1190, 68, dim);
+    // Progress bar (full width under song info)
+    SDL_SetRenderDrawColor(r, t->panel_r, t->panel_g, t->panel_b, 200);
+    SDL_Rect pb_bg = { 820, 78, 440, 5 };
     SDL_RenderFillRect(r, &pb_bg);
     double ratio = (dur > 0.1) ? (pos / dur) : 0;
     if (ratio > 1.0) ratio = 1.0;
     if (ratio < 0) ratio = 0;
     SDL_SetRenderDrawColor(r, t->accent_r, t->accent_g, t->accent_b, 255);
-    SDL_Rect pb_fg = { 870, 73, (int)(320 * ratio), 6 };
+    SDL_Rect pb_fg = { 820, 78, (int)(440 * ratio), 5 };
     SDL_RenderFillRect(r, &pb_fg);
 }
 
@@ -172,7 +177,7 @@ void ui_draw_main_area(SDL_Renderer *r, Playlist *pl,
     
     if (panel_mode == 0) {
         // Lyrics mode
-        ui_render_text(r, font_med, "Lyrics", left_x + 20, top + 15, accent);
+        ui_render_text(r, font_med, "歌词", left_x + 20, top + 15, accent);
         
         // Current lyric (large, centered)
         const char *cur_lyric = lyrics_get_current(lyrics);
@@ -180,10 +185,10 @@ void ui_draw_main_area(SDL_Renderer *r, Playlist *pl,
             ui_render_text_centered(r, font_large, cur_lyric,
                 left_x + left_w/2, top + main_h/2 - 20, text_color);
         } else {
-            ui_render_text_centered(r, font_med, "No Lyrics",
+            ui_render_text_centered(r, font_med, "暂无歌词",
                 left_x + left_w/2, top + main_h/2, dim);
             ui_render_text_centered(r, font_small,
-                "Put .lrc file with music",
+                "将歌词文件(.lrc)与音乐放在同一目录",
                 left_x + left_w/2, top + main_h/2 + 35, dim);
         }
         
@@ -201,7 +206,7 @@ void ui_draw_main_area(SDL_Renderer *r, Playlist *pl,
         }
     } else if (panel_mode == 1) {
         // Spectrum mode - AiMusic style: title + time + progress + big spectrum
-        ui_render_text(r, font_med, "Spectrum", left_x + 20, top + 15, accent);
+        ui_render_text(r, font_med, "频谱", left_x + 20, top + 15, accent);
         
         // Song title (centered)
         const char *current = player_current_track(player);
@@ -238,8 +243,8 @@ void ui_draw_main_area(SDL_Renderer *r, Playlist *pl,
         }
     } else {
         // Cover mode
-        ui_render_text(r, font_med, "Cover", left_x + 20, top + 15, accent);
-        ui_render_text_centered(r, font_med, "No Cover",
+        ui_render_text(r, font_med, "封面", left_x + 20, top + 15, accent);
+        ui_render_text_centered(r, font_med, "暂无封面",
             left_x + left_w/2, top + main_h/2, dim);
     }
     
@@ -248,7 +253,7 @@ void ui_draw_main_area(SDL_Renderer *r, Playlist *pl,
     
     // Playlist header
     char header[64];
-    snprintf(header, sizeof(header), "Playlist  %d items", pl->count);
+    snprintf(header, sizeof(header), "播放列表  %d首", pl->count);
     ui_render_text(r, font_med, header, right_x + 20, top + 15, accent);
     
     // Playlist items
@@ -292,7 +297,7 @@ void ui_draw_bottom_bar(SDL_Renderer *r, int panel_mode,
     ui_draw_rounded_rect(r, 10, y + 5, 1260, t->bottom_bar_height - 10, 10, panel);
     
     // Mode buttons
-    const char *modes[] = { "Lyrics", "Spectrum", "Cover" };
+    const char *modes[] = { "歌词", "频谱", "封面" };
     for (int i = 0; i < 3; i++) {
         int bx = 30 + i * 100;
         SDL_Color c = (i == panel_mode) ? accent : dim;
@@ -301,7 +306,7 @@ void ui_draw_bottom_bar(SDL_Renderer *r, int panel_mode,
     
     
     // Battery (simulated)
-    ui_render_text(r, font_small, "Bat 97%", 1150, y + 15, accent);
+    ui_render_text(r, font_small, "电量 97%", 1150, y + 15, accent);
 }
 
 // Draw help overlay
