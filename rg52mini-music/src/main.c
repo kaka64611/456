@@ -143,6 +143,10 @@ int app_init(const char *music_dir) {
     eq_set_enabled(app->eq, 1);
     app->eq_enabled = 1;
     player_set_eq(app->player, app->eq);
+    // Set EQ sample rate to match actual audio device
+    int actual_rate = player_get_sample_rate(app->player);
+    eq_set_sample_rate(app->eq, (float)actual_rate);
+    printf("EQ initialized with sample rate: %d\n", actual_rate);
     
     // Input
     input_init();

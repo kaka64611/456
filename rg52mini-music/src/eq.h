@@ -40,4 +40,7 @@ void eq_apply_preset(EQState *eq, int preset);
 // Get current preset index
 int eq_get_current_preset(EQState *eq);
 
+// Set sample rate and reinitialize filters (call after knowing actual audio rate)
+void eq_set_sample_rate(EQState *eq, float sample_rate);
+
 #endif

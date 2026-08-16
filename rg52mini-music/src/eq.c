@@ -16,6 +16,7 @@ typedef struct {
 static BiQuad filters[EQ_BANDS];
 static int filters_initialized = 0;
 static int current_preset = 0;
+static float g_sample_rate = 44100.0f;
 
 static void calc_biquad_peaking(BiQuad *f, float freq, float gain_db,
     float q, float sample_rate) {
@@ -41,7 +42,7 @@ static void calc_biquad_peaking(BiQuad *f, float freq, float gain_db,
 static void init_filters(EQState *eq) {
     for (int i = 0; i < EQ_BANDS; i++) {
         calc_biquad_peaking(&filters[i], eq->frequencies[i],
-            eq->gains[i], 1.0f, 44100.0f);
+            eq->gains[i], 1.0f, g_sample_rate);
     }
     filters_initialized = 1;
 }
@@ -78,7 +79,7 @@ void eq_set_band(EQState *eq, int band, float gain_db) {
     if (gain_db > 12.0f) gain_db = 12.0f;
     eq->gains[band] = gain_db;
     calc_biquad_peaking(&filters[band], eq->frequencies[band],
-        gain_db, 1.0f, 44100.0f);
+        gain_db, 1.0f, g_sample_rate);
 }
 
 float eq_get_band(EQState *eq, int band) {
@@ -139,11 +140,11 @@ static const char *preset_names[EQ_PRESET_COUNT] = {
 
 static const float preset_gains[EQ_PRESET_COUNT][EQ_BANDS] = {
     { 0,  0,  0,  0,  0},  // Flat
-    {-1,  2,  4,  4, -1},  // Pop
-    { 6,  4,  0,  2,  4},  // Dance
-    { 3,  2,  0,  2, -1},  // Jazz
-    { 5,  3, -1,  2,  4},  // Rock
-    { 4,  3,  0,  2,  4},  // Classical
+    {-2,  3,  6,  6, -2},  // Pop (enhanced)
+    { 9,  6,  0,  3,  6},  // Dance (enhanced bass + treble)
+    { 4,  3,  0,  3, -2},  // Jazz
+    { 8,  5, -2,  3,  6},  // Rock (enhanced bass + treble)
+    { 6,  4,  0,  3,  6},  // Classical
 };
 
 const char *eq_get_preset_name(int index) {
@@ -157,11 +158,21 @@ void eq_apply_preset(EQState *eq, int preset) {
     for (int i = 0; i < EQ_BANDS; i++) {
         eq->gains[i] = preset_gains[preset][i];
         calc_biquad_peaking(&filters[i], eq->frequencies[i],
-            eq->gains[i], 1.0f, 44100.0f);
+            eq->gains[i], 1.0f, g_sample_rate);
     }
 }
 
 int eq_get_current_preset(EQState *eq) {
     (void)eq;
     return current_preset;
+}
+
+void eq_set_sample_rate(EQState *eq, float sample_rate) {
+    if (sample_rate < 8000.0f || sample_rate > 192000.0f) return;
+    g_sample_rate = sample_rate;
+    if (eq) {
+        init_filters(eq);
+        // Re-apply current preset with new sample rate
+        eq_apply_preset(eq, current_preset);
+    }
 }

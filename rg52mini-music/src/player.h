@@ -67,4 +67,7 @@ void player_set_play_mode(PlayerState *p, int mode);
 // Get play mode
 int player_get_play_mode(PlayerState *p);
 
+// Get actual audio sample rate
+int player_get_sample_rate(PlayerState *p);
+
 #endif

@@ -19,6 +19,7 @@ struct PlayerState {
     Uint32 start_tick;
     Uint32 pause_tick;
     int play_mode; // 0=sequence, 1=repeat, 2=shuffle
+    int sample_rate; // Actual audio sample rate
     // Real audio ring buffer for spectrum
     short audio_ring[AUDIO_RING_SIZE];
     volatile int audio_write_pos;
@@ -67,12 +68,16 @@ PlayerState *player_init(void) {
     g_eq = NULL;
     
     // Initialize SDL_mixer
+    p->sample_rate = 44100;
     if (Mix_OpenAudio(44100, AUDIO_S16SYS, 2, 4096) < 0) {
-        fprintf(stderr, "Mix_OpenAudio failed: %s\n", Mix_GetError());
+        fprintf(stderr, "Mix_OpenAudio 44100 failed: %s\n", Mix_GetError());
         if (Mix_OpenAudio(48000, AUDIO_S16SYS, 2, 4096) < 0) {
-            fprintf(stderr, "Mix_OpenAudio retry failed: %s\n", Mix_GetError());
+            fprintf(stderr, "Mix_OpenAudio 48000 retry failed: %s\n", Mix_GetError());
+        } else {
+            p->sample_rate = 48000;
         }
     }
+    fprintf(stderr, "Audio sample rate: %d\n", p->sample_rate);
     
     // Register postmix callback to capture real audio
     Mix_SetPostMix(postmix_callback, NULL);
@@ -96,6 +101,10 @@ void player_set_play_mode(PlayerState *p, int mode) {
 
 int player_get_play_mode(PlayerState *p) {
     return p ? p->play_mode : 0;
+}
+
+int player_get_sample_rate(PlayerState *p) {
+    return p ? p->sample_rate : 44100;
 }
 
 void player_free(PlayerState *p) {
@@ -245,6 +254,12 @@ void player_prev(PlayerState *p, Playlist *pl) {
 
 int player_track_finished(PlayerState *p) {
     if (!p || !p->music) return 0;
+    // Check flag set by player_update()
+    if (p->track_finished) {
+        p->is_playing = 0;
+        return 1;
+    }
+    // Also direct check in case update wasn't called
     if (!Mix_PlayingMusic() && p->is_playing && !p->is_paused) {
         p->track_finished = 1;
         p->is_playing = 0;
@@ -262,9 +277,10 @@ void player_update(PlayerState *p) {
         // Track max position as duration estimate
         if (p->position > p->duration) p->duration = p->position;
         // Check if music actually stopped (finished or error)
+        // Only set track_finished flag, don't clear is_playing here
+        // so player_track_finished() can detect it properly
         if (!Mix_PlayingMusic() && !Mix_PausedMusic()) {
             p->track_finished = 1;
-            p->is_playing = 0;
         }
     }
 }
