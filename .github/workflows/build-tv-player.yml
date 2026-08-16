@@ -1,0 +1,59 @@
+name: Build RG52MINI TV Player (AArch64)
+
+on:
+  push:
+    paths:
+      - 'rg52mini-tv/**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install arm64 toolchain and libs
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+          sudo dpkg --add-architecture arm64
+          sudo apt-get update
+          sudo apt-get install -y libsdl2-dev:arm64 libsdl2-ttf-dev:arm64 libmpv-dev:arm64
+
+      - name: Build for AArch64
+        run: |
+          cd rg52mini-tv
+          make CC=aarch64-linux-gnu-gcc clean
+          make CC=aarch64-linux-gnu-gcc
+          file rg52mini-tv
+
+      - name: Prepare package
+        run: |
+          mkdir -p package/ports/rg52mini-tv/assets/fonts
+          mkdir -p package/ports_scripts
+          cp rg52mini-tv/rg52mini-tv package/ports/rg52mini-tv/
+          cp rg52mini-tv/assets/fonts/NotoSansCJKsc-Regular.otf package/ports/rg52mini-tv/assets/fonts/
+          cp rg52mini-tv/rg52mini-tv.sh package/ports_scripts/
+          cd package && zip -r ../rg52mini-tv-ee47.zip .
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: rg52mini-tv-binary
+          path: rg52mini-tv/rg52mini-tv
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: rg52mini-tv-package
+          path: rg52mini-tv-ee47.zip
+
+      - name: Commit binary to repo
+        run: |
+          mkdir -p bin
+          cp rg52mini-tv/rg52mini-tv bin/
+          git config user.name "rg52mini-tv"
+          git config user.email "rg52mini@example.com"
+          git add bin/rg52mini-tv
+          git commit -m "Build: rg52mini-tv AArch64 binary" || echo "No changes to commit"
+          git push
