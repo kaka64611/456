@@ -2,8 +2,6 @@ name: Build RG52MINI TV Player (AArch64)
 
 on:
   push:
-    paths:
-      - 'rg52mini-tv/**'
   workflow_dispatch:
 
 jobs:
