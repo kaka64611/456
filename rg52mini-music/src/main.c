@@ -438,6 +438,20 @@ void update() {
     player_update(app->player);
     if (app->volume_show_timer > 0) app->volume_show_timer--;
     
+    // Save tracked duration to playlist for current track
+    const char *cur_path = player_current_track(app->player);
+    if (cur_path) {
+        double dur = player_get_duration(app->player);
+        if (dur > 1) {
+            for (int i = 0; i < app->playlist->count; i++) {
+                if (strcmp(app->playlist->items[i].path, cur_path) == 0) {
+                    app->playlist->items[i].duration = (int)dur;
+                    break;
+                }
+            }
+        }
+    }
+    
     // Update spectrum with audio data
     if (app->spectrum && player_is_playing(app->player)) {
         spectrum_update(app->spectrum, app->player);
