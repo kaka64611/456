@@ -403,16 +403,50 @@ void ui_draw_bottom_bar(SDL_Renderer *r, int panel_mode,
     
     ui_draw_rounded_rect(r, 10, y + 5, 1260, t->bottom_bar_height - 10, 10, panel);
     
-    // Mode buttons
+    // Mode buttons (tight spacing)
     const char *modes[] = { "歌词", "频谱", "封面" };
+    int mode_x = 25;
     for (int i = 0; i < 3; i++) {
-        int bx = 30 + i * 100;
         SDL_Color c = (i == panel_mode) ? accent : dim;
-        ui_render_text(r, font_small, modes[i], bx, y + 15, c);
+        ui_render_text(r, font_small, modes[i], mode_x, y + 15, c);
+        mode_x += 52; // tight spacing
     }
     
+    // Separator after mode buttons
+    ui_render_text(r, font_small, "|", mode_x, y + 15, dim);
+    mode_x += 15;
     
-    // Battery (simulated)
+    // Key hints
+    typedef struct { const char *key; const char *action; } KeyHint;
+    KeyHint hints[] = {
+        {"Sel+Start", "退出"},
+        {"A", "播放"},
+        {"B", "暂停"},
+        {"X", "EQ"},
+        {"Y", "模式"},
+        {"L1", "上首"},
+        {"R1", "下首"},
+    };
+    int hint_count = sizeof(hints) / sizeof(hints[0]);
+    
+    for (int i = 0; i < hint_count; i++) {
+        // Key name in accent
+        ui_render_text(r, font_small, hints[i].key, mode_x, y + 15, accent);
+        int key_w = 0, dummy;
+        TTF_SizeText(font_small, hints[i].key, &key_w, &dummy);
+        // Action in dim
+        ui_render_text(r, font_small, hints[i].action, mode_x + key_w + 4, y + 15, dim);
+        int act_w = 0;
+        TTF_SizeText(font_small, hints[i].action, &act_w, &dummy);
+        mode_x += key_w + act_w + 4;
+        // Separator between hints (except last)
+        if (i < hint_count - 1) {
+            ui_render_text(r, font_small, "|", mode_x, y + 15, dim);
+            mode_x += 12;
+        }
+    }
+    
+    // Battery (right aligned)
     ui_render_text(r, font_small, "电量 97%", 1150, y + 15, accent);
 }
 
