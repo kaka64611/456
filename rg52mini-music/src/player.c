@@ -18,6 +18,7 @@ struct PlayerState {
     int track_finished;
     Uint32 start_tick;
     Uint32 pause_tick;
+    int play_mode; // 0=sequence, 1=repeat, 2=shuffle
     // Real audio ring buffer for spectrum
     short audio_ring[AUDIO_RING_SIZE];
     volatile int audio_write_pos;
@@ -122,10 +123,7 @@ int player_play(PlayerState *p, const char *path) {
     }
     
     strncpy(p->current_path, path, MAX_PATH_LEN - 1);
-    // Try to get real duration
-    p->duration = 0;
-    double dur = Mix_MusicDuration(p->music);
-    if (dur > 0) p->duration = dur;
+    p->duration = 0; // Will be tracked as max position reached
     // Reset audio ring buffer
     p->audio_write_pos = 0;
     p->audio_count = 0;
@@ -258,14 +256,11 @@ int player_track_finished(PlayerState *p) {
 void player_update(PlayerState *p) {
     if (!p) return;
     if (p->is_playing && !p->is_paused) {
-        // Use Mix_GetMusicPosition if available, fall back to tick counter
-        double mix_pos = Mix_GetMusicPosition();
-        if (mix_pos >= 0) {
-            p->position = mix_pos;
-        } else {
-            p->position = (double)(SDL_GetTicks() - p->start_tick) / 1000.0;
-        }
+        // Use tick counter for position (Mix_GetMusicPosition not available)
+        p->position = (double)(SDL_GetTicks() - p->start_tick) / 1000.0;
         if (p->position < 0) p->position = 0;
+        // Track max position as duration estimate
+        if (p->position > p->duration) p->duration = p->position;
         // Check if music actually stopped (finished or error)
         if (!Mix_PlayingMusic() && !Mix_PausedMusic()) {
             p->track_finished = 1;
