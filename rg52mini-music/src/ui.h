@@ -11,7 +11,7 @@
 
 // Draw top bar (controls + song info + cover)
 void ui_draw_top_bar(SDL_Renderer *r, PlayerState *player,
-    Playlist *pl, TTF_Font *font_med, TTF_Font *font_large, Theme *t);
+    Playlist *pl, TTF_Font *font_med, TTF_Font *font_large, Theme *t, int eq_preset);
 
 // Draw main area (left playlist + right spectrum/lyrics)
 void ui_draw_main_area(SDL_Renderer *r, Playlist *pl,

@@ -314,7 +314,7 @@ void render() {
     
     // Draw top bar
     ui_draw_top_bar(r, app->player, app->playlist, app->font_medium,
-        app->font_large, t);
+        app->font_large, t, eq_get_current_preset(app->eq));
     
     // Draw main area (left playlist + right spectrum/lyrics)
     ui_draw_main_area(r, app->playlist, app->selected_index,

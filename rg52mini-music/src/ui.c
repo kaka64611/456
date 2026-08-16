@@ -60,7 +60,7 @@ static void format_time(double seconds, char *buf, int len) {
 
 // Draw top bar
 void ui_draw_top_bar(SDL_Renderer *r, PlayerState *player,
-    Playlist *pl, TTF_Font *font_med, TTF_Font *font_large, Theme *t) {
+    Playlist *pl, TTF_Font *font_med, TTF_Font *font_large, Theme *t, int eq_preset) {
     int h = t->top_bar_height;
     SDL_Color text_color = { t->text_r, t->text_g, t->text_b, 255 };
     SDL_Color accent = { t->accent_r, t->accent_g, t->accent_b, 255 };
@@ -70,9 +70,19 @@ void ui_draw_top_bar(SDL_Renderer *r, PlayerState *player,
     SDL_Color panel = { t->panel_r, t->panel_g, t->panel_b, 255 };
     ui_draw_rounded_rect(r, 10, 5, 1260, h - 10, 12, panel);
     
-    // Left: mode indicators
-    ui_render_text(r, font_med, "循环", 30, 20, accent);
-    ui_render_text(r, font_med, "均衡", 100, 20, dim);
+    // Left: play mode and EQ status
+    const char *mode_names[] = {"顺序", "循环", "随机"};
+    const char *eq_names[] = {"默认", "流行", "舞曲", "爵士", "摇滚", "古典"};
+    int play_mode = player_get_play_mode(player);
+    if (play_mode < 0 || play_mode > 2) play_mode = 0;
+    if (eq_preset < 0 || eq_preset > 5) eq_preset = 0;
+    
+    char mode_buf[32], eq_buf[32];
+    snprintf(mode_buf, sizeof(mode_buf), "模式:%s", mode_names[play_mode]);
+    snprintf(eq_buf, sizeof(eq_buf), "EQ:%s", eq_names[eq_preset]);
+    
+    ui_render_text(r, font_med, mode_buf, 30, 18, accent);
+    ui_render_text(r, font_med, eq_buf, 30, 45, dim);
     
     // Volume bar
     int vol = player_get_volume(player);
