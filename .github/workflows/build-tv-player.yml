@@ -63,17 +63,41 @@ jobs:
         file rg52mini-tv
         echo "=== Build success ==="
 
-    - name: Prepare package
+    - name: Prepare package (collect ALL dependencies)
       run: |
         mkdir -p package/ports/rg52mini-tv/assets/fonts
         mkdir -p package/ports_scripts
         cp rg52mini-tv/rg52mini-tv package/ports/rg52mini-tv/
         cp rg52mini-tv/assets/fonts/NotoSansCJKsc-Regular.otf package/ports/rg52mini-tv/assets/fonts/
         cp -r rg52mini-tv/libs package/ports/rg52mini-tv/
-        # Copy missing dependency libs from cross-compile env
-        cp /usr/lib/aarch64-linux-gnu/libffi.so.8 package/ports/rg52mini-tv/libs/ 2>/dev/null || true
         cp "rg52mini-tv/RG52MINI TV Player.sh" package/ports_scripts/
         cp rg52mini-tv/使用说明.txt package/
+
+        # Recursively collect ALL shared library dependencies
+        DEST=package/ports/rg52mini-tv/libs
+        collect_deps() {
+          local bin="$1"
+          local needed=$(aarch64-linux-gnu-readelf -d "$bin" 2>/dev/null | grep NEEDED | awk '{print $5}' | tr -d '[]')
+          for lib in $needed; do
+            if [ -f "$DEST/$lib" ]; then continue; fi
+            local found=$(find /usr/lib/aarch64-linux-gnu /lib/aarch64-linux-gnu /usr/lib -name "$lib" 2>/dev/null | head -1)
+            if [ -n "$found" ]; then
+              echo "  + $lib"
+              cp "$found" "$DEST/$lib"
+              collect_deps "$found"
+            fi
+          done
+        }
+        echo "=== Collecting dependencies for rg52mini-tv ==="
+        collect_deps rg52mini-tv/rg52mini-tv
+        echo "=== Also collecting for libmpv (it has many deps) ==="
+        if [ -f "$DEST/libmpv.so.2" ]; then
+          collect_deps "$DEST/libmpv.so.2"
+        fi
+        echo "=== Total libs in package: ==="
+        ls -1 "$DEST" | wc -l
+        ls -lh "$DEST" | tail -n +2
+
         cd package && zip -r ../rg52mini-tv-ee47.zip .
 
     - name: Upload binary
