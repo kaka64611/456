@@ -139,8 +139,8 @@ void ui_draw_top_bar(SDL_Renderer *r, PlayerState *player,
         strcpy(durbuf, "--:--");
     }
     // Time labels
-    ui_render_text(r, font_small, timebuf, 820, 68, dim);
-    ui_render_text(r, font_small, durbuf, 1190, 68, dim);
+    ui_render_text(r, font_med, timebuf, 820, 68, dim);
+    ui_render_text(r, font_med, durbuf, 1190, 68, dim);
     // Progress bar (full width under song info)
     SDL_SetRenderDrawColor(r, t->panel_r, t->panel_g, t->panel_b, 200);
     SDL_Rect pb_bg = { 820, 78, 440, 5 };
