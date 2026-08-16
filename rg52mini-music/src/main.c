@@ -279,11 +279,11 @@ void handle_input(SDL_Event *event) {
             break;
         case ACTION_VOL_UP:
             player_set_volume(app->player, 
-                player_get_volume(app->player) + 5);
+                player_get_volume(app->player) + 10);
             break;
         case ACTION_VOL_DOWN:
             player_set_volume(app->player, 
-                player_get_volume(app->player) - 5);
+                player_get_volume(app->player) - 10);
             break;
         case ACTION_SEEK_FORWARD:
             player_seek(app->player, 5);

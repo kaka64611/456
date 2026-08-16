@@ -39,8 +39,8 @@ InputAction input_process(SDL_Event *event) {
             case 1: return ACTION_PAUSE;       // B = Pause
             case 2: printf("JOY X -> EQ\n"); return ACTION_TOGGLE_EQ;   // X = EQ preset
             case 3: printf("JOY Y -> MODE\n"); return ACTION_PLAY_MODE;   // Y = Play mode
-            case 4: printf("JOY btn4 -> DOWN\n"); return ACTION_DOWN;  // D-pad Down
-            case 5: printf("JOY btn5 -> UP\n"); return ACTION_UP;      // D-pad Up
+            case 4: return ACTION_PREV;        // L1 = Previous track
+            case 5: return ACTION_NEXT;        // R1 = Next track
             case 6: return ACTION_THEME_PREV;  // L2 = Theme prev
             case 7: return ACTION_THEME_NEXT;  // R2 = Theme next
             case 8:                            // Select alt
@@ -50,8 +50,8 @@ InputAction input_process(SDL_Event *event) {
                 if (select_held) return ACTION_QUIT;
                 return ACTION_TOGGLE_PANEL;
             // RG52MINI actual button mapping (from debug log)
-            case 14: return ACTION_PREV;       // L1 = Previous
-            case 15: return ACTION_NEXT;       // R1 = Next
+            case 14: return ACTION_UP;         // D-pad Up = scroll up
+            case 15: return ACTION_DOWN;       // D-pad Down = scroll down
             case 16: printf("JOY btn16 -> VOL_DOWN\n"); return ACTION_VOL_DOWN;
             case 17: printf("JOY btn17 -> VOL_UP\n"); return ACTION_VOL_UP;
             default:
