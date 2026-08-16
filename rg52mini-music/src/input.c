@@ -37,21 +37,23 @@ InputAction input_process(SDL_Event *event) {
         switch (btn) {
             case 0: return ACTION_PLAY;        // A = Play
             case 1: return ACTION_PAUSE;       // B = Pause
-            case 2: return ACTION_TOGGLE_EQ;   // X = EQ preset (mapping 1)
-            case 3: return ACTION_PLAY_MODE;   // Y = Play mode (mapping 1)
-            case 4: return ACTION_PREV;        // L1 = Previous
-            case 5: return ACTION_NEXT;        // R1 = Next
-            case 6: return ACTION_THEME_PREV;  // L2 = Theme prev
-            case 7: return ACTION_THEME_NEXT;  // R2 = Theme next
-            case 8:                            // Select
+            case 2: return ACTION_TOGGLE_EQ;   // X = EQ preset
+            case 3: return ACTION_PLAY_MODE;   // Y = Play mode
+            case 4: return ACTION_PREV;        // L1 alt
+            case 5: return ACTION_NEXT;        // R1 alt
+            case 6: return ACTION_THEME_PREV;  // L2 alt
+            case 7: return ACTION_THEME_NEXT;  // R2 alt
+            case 8:                            // Select alt
                 select_held = 1;
                 return ACTION_NONE;
             case 9:                            // Start
                 if (select_held) return ACTION_QUIT;
                 return ACTION_TOGGLE_PANEL;
-            // Fallback mappings for devices with different button numbering
-            case 10: return ACTION_TOGGLE_EQ;  // X alt
-            case 11: return ACTION_PLAY_MODE;  // Y alt
+            // RG52MINI actual button mapping (from debug log)
+            case 14: return ACTION_PREV;       // L1 = Previous
+            case 15: return ACTION_NEXT;       // R1 = Next
+            case 16: return ACTION_THEME_PREV; // L2 = Theme prev
+            case 17: return ACTION_THEME_NEXT; // R2 = Theme next
             default:
                 printf("JOY unhandled button: %d\n", btn);
                 return ACTION_NONE;
@@ -60,7 +62,8 @@ InputAction input_process(SDL_Event *event) {
 
     if (event->type == SDL_JOYBUTTONUP) {
         Uint8 btn = event->jbutton.button;
-        if (btn == 8) select_held = 0; // Select released
+        // Select could be button 8 on some devices
+        if (btn == 8) select_held = 0;
         return ACTION_NONE;
     }
 
