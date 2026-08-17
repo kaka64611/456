@@ -285,23 +285,41 @@ static void play_selected(void) {
                 try_url = url_idx;
             }
 
-            // Show loading screen with buffer info
+            // Show testing screen
             app->view = VIEW_LOADING;
             app->error_msg[0] = '\0';
-            if (ch_attempt == 0 && url_idx == 0) {
+            snprintf(app->loading_msg, sizeof(app->loading_msg),
+                     "%s\n\n源 %d/%d\n正在测试连接...",
+                     ch->name, try_url + 1, ch->url_count);
+            render();
+            SDL_RenderPresent(app->renderer);
+
+            // Test URL connectivity and measure speed
+            int speed_kbps = 0;
+            long size_bytes = 0;
+            bool test_ok = player_test_url(ch->urls[try_url], &speed_kbps, &size_bytes, 8);
+
+            // Show buffer result
+            if (test_ok) {
                 snprintf(app->loading_msg, sizeof(app->loading_msg),
-                         "正在加载: %s\n\n源 %d/%d\n正在连接直播源...\n缓冲网络数据中，请稍候...",
-                         ch->name, try_url + 1, ch->url_count);
+                         "%s\n\n源 %d/%d\n连接成功!\n网速: %d KB/s\n已缓冲: %.1f KB\n\n正在启动播放器...",
+                         ch->name, try_url + 1, ch->url_count,
+                         speed_kbps, size_bytes / 1024.0);
             } else {
                 snprintf(app->loading_msg, sizeof(app->loading_msg),
-                         "切换源: %s\n\n源 %d/%d\n正在连接直播源...\n缓冲网络数据中，请稍候...",
+                         "%s\n\n源 %d/%d\n连接失败，正在尝试下一个源...",
                          ch->name, try_url + 1, ch->url_count);
             }
             render();
             SDL_RenderPresent(app->renderer);
-            SDL_Delay(500);
+            SDL_Delay(800);
 
-            // Suspend SDL so mpv can use SDL video output
+            if (!test_ok) {
+                last_failed_index = idx;
+                continue;
+            }
+
+            // Suspend SDL so mpv can use video output
             app_suspend_sdl();
 
             // Try to play
@@ -358,14 +376,35 @@ static void handle_action(InputAction action) {
                 int url_idx = app->source_select_index;
                 app->view = VIEW_LOADING;
                 snprintf(app->loading_msg, sizeof(app->loading_msg),
-                         "正在加载: %s\n\n手动选择源 %d/%d\n正在连接直播源...\n缓冲网络数据中，请稍候...", ch->name, url_idx + 1, ch->url_count);
+                         "%s\n\n手动选择源 %d/%d\n正在测试连接...", ch->name, url_idx + 1, ch->url_count);
                 render();
                 SDL_RenderPresent(app->renderer);
-                SDL_Delay(500);
-                app_suspend_sdl();
-                bool ok = player_load(app->player, ch->urls[url_idx]);
-                app_resume_sdl();
-                if (ok) {
+
+                // Test URL
+                int speed_kbps = 0;
+                long size_bytes = 0;
+                bool test_ok = player_test_url(ch->urls[url_idx], &speed_kbps, &size_bytes, 8);
+
+                if (test_ok) {
+                    snprintf(app->loading_msg, sizeof(app->loading_msg),
+                             "%s\n\n手动选择源 %d/%d\n连接成功!\n网速: %d KB/s\n已缓冲: %.1f KB\n\n正在启动播放器...",
+                             ch->name, url_idx + 1, ch->url_count,
+                             speed_kbps, size_bytes / 1024.0);
+                    render();
+                    SDL_RenderPresent(app->renderer);
+                    SDL_Delay(800);
+                    app_suspend_sdl();
+                    bool ok = player_load(app->player, ch->urls[url_idx]);
+                    app_resume_sdl();
+                } else {
+                    snprintf(app->loading_msg, sizeof(app->loading_msg),
+                             "%s\n\n源 %d/%d\n连接失败!",
+                             ch->name, url_idx + 1, ch->url_count);
+                    render();
+                    SDL_RenderPresent(app->renderer);
+                    SDL_Delay(1500);
+                }
+                if (test_ok) {
                     ch->preferred_url = url_idx;
                     playlist_save_preferences(app->all_channels, "/roms/ports/rg52mini-tv/source_prefs.txt");
                 }

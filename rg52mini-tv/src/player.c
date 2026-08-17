@@ -29,6 +29,44 @@ void player_destroy(TVPlayer *p) {
     free(p);
 }
 
+bool player_test_url(const char *url, int *speed_kbps, long *size_bytes, int timeout_sec) {
+    if (!url || !speed_kbps || !size_bytes) return false;
+    *speed_kbps = 0;
+    *size_bytes = 0;
+
+    char cmd[2048];
+    char tmpfile[] = "/tmp/mpv_test_XXXXXX";
+    int fd = mkstemp(tmpfile);
+    if (fd < 0) return false;
+    close(fd);
+
+    // Use curl to download a small portion and measure speed
+    snprintf(cmd, sizeof(cmd),
+        "curl -s -o /dev/null -w '%%{speed_download} %%{size_download}' "
+        "--max-time %d --connect-timeout 5 -r 0-2097152 \"%s\" 2>/dev/null",
+        timeout_sec, url);
+
+    FILE *fp = popen(cmd, "r");
+    if (!fp) {
+        unlink(tmpfile);
+        return false;
+    }
+
+    char result[256];
+    if (fgets(result, sizeof(result), fp)) {
+        double speed = 0;
+        long size = 0;
+        if (sscanf(result, "%lf %ld", &speed, &size) == 2) {
+            *speed_kbps = (int)(speed / 1024.0);
+            *size_bytes = size;
+        }
+    }
+    pclose(fp);
+    unlink(tmpfile);
+
+    return (*size_bytes > 0);
+}
+
 bool player_load(TVPlayer *p, const char *url) {
     if (!p || !url) return false;
 
@@ -38,11 +76,11 @@ bool player_load(TVPlayer *p, const char *url) {
     // Clear previous mpv log
     system("rm -f /roms/ports/rg52mini-tv/mpv.log");
 
-    // Build mpv command - use safe compatible settings
+    // Build mpv command - use safe compatible settings, no cache-pause
     char cmd[2048];
     snprintf(cmd, sizeof(cmd),
-        "mpv --fs --ao=alsa --volume=%d --cache=yes --cache-secs=10 "
-        "--cache-pause=yes --network-timeout=20 --keep-open=always "
+        "mpv --fs --ao=alsa --volume=%d --cache=yes --cache-secs=5 "
+        "--network-timeout=20 --keep-open=always "
         "--force-window=yes --vd-lavc-threads=4 "
         "--input-gamepad=yes "
         "--input-conf=/roms/ports/rg52mini-tv/mpv-input.conf "
