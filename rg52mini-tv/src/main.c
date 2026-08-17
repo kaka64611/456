@@ -640,7 +640,7 @@ static void render(void) {
                 app->selected, app->scroll, app->theme);
             break;
         case VIEW_LOADING:
-            ui_draw_loading(app->renderer, app->loading_msg[0] ? app->loading_msg : "正在加载频道...", app->theme);
+            ui_draw_loading(app->renderer, app->loading_msg[0] ? app->loading_msg : "请稍候...", app->theme);
             break;
         case VIEW_PLAYING:
             // Video is rendered by mpv directly to screen

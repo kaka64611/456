@@ -165,9 +165,9 @@ void ui_draw_loading(SDL_Renderer *r, const char *text, Theme *t) {
 
     SDL_Color accent = {t->accent.r, t->accent.g, t->accent.b, 255};
     SDL_Color text_color = {t->text.r, t->text.g, t->text.b, 255};
-    render_text_centered(r, font_large, "正在加载", 640, 260, accent);
+    render_text_centered(r, font_large, "● ● ●", 640, 240, accent);
     if (text) {
-        render_text_multiline_centered(r, font_medium, text, 640, 330, 45, text_color);
+        render_text_multiline_centered(r, font_medium, text, 640, 310, 45, text_color);
     }
 }
 

@@ -34,37 +34,41 @@ bool player_test_url(const char *url, int *speed_kbps, long *size_bytes, int tim
     *speed_kbps = 0;
     *size_bytes = 0;
 
-    char cmd[2048];
-    char tmpfile[] = "/tmp/mpv_test_XXXXXX";
-    int fd = mkstemp(tmpfile);
-    if (fd < 0) return false;
-    close(fd);
+    // Check if curl exists
+    if (system("which curl > /dev/null 2>&1") != 0) {
+        printf("Player test: curl not found, skipping test\n");
+        return true;
+    }
 
-    // Use curl to download a small portion and measure speed
+    char cmd[2048];
     snprintf(cmd, sizeof(cmd),
         "curl -s -o /dev/null -w '%%{speed_download} %%{size_download}' "
-        "--max-time %d --connect-timeout 5 -r 0-2097152 \"%s\" 2>/dev/null",
+        "--max-time %d --connect-timeout 5 -r 0-1048576 \"%s\" 2>/dev/null",
         timeout_sec, url);
+
+    printf("Player test: %s\n", cmd);
 
     FILE *fp = popen(cmd, "r");
     if (!fp) {
-        unlink(tmpfile);
-        return false;
+        printf("Player test: popen failed, skipping\n");
+        return true;
     }
 
-    char result[256];
+    char result[256] = "";
     if (fgets(result, sizeof(result), fp)) {
         double speed = 0;
         long size = 0;
-        if (sscanf(result, "%lf %ld", &speed, &size) == 2) {
+        printf("Player test result: '%s'\n", result);
+        if (sscanf(result, "%lf %ld", &speed, &size) == 2 && size > 0) {
             *speed_kbps = (int)(speed / 1024.0);
             *size_bytes = size;
+            pclose(fp);
+            return true;
         }
     }
     pclose(fp);
-    unlink(tmpfile);
-
-    return (*size_bytes > 0);
+    printf("Player test: failed\n");
+    return false;
 }
 
 bool player_load(TVPlayer *p, const char *url) {
