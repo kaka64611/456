@@ -221,7 +221,7 @@ static void app_suspend_sdl(void) {
     if (app->window) { SDL_DestroyWindow(app->window); app->window = NULL; }
     SDL_Quit();
     // Wait for video device to be fully released
-    usleep(500000);  // 0.5 seconds
+    usleep(200000);  // 0.2 seconds
 }
 
 // Resume SDL after mpv exits
@@ -289,7 +289,7 @@ static void play_selected(void) {
             app->view = VIEW_LOADING;
             app->error_msg[0] = '\0';
             snprintf(app->loading_msg, sizeof(app->loading_msg),
-                     "%s\n\n源 %d/%d\n正在测试连接...",
+                     "%s\n\n源 %d/%d\n正在连接...",
                      ch->name, try_url + 1, ch->url_count);
             render();
             SDL_RenderPresent(app->renderer);
@@ -312,7 +312,7 @@ static void play_selected(void) {
             }
             render();
             SDL_RenderPresent(app->renderer);
-            SDL_Delay(800);
+            SDL_Delay(1500);
 
             if (!test_ok) {
                 last_failed_index = idx;
@@ -376,7 +376,7 @@ static void handle_action(InputAction action) {
                 int url_idx = app->source_select_index;
                 app->view = VIEW_LOADING;
                 snprintf(app->loading_msg, sizeof(app->loading_msg),
-                         "%s\n\n手动选择源 %d/%d\n正在测试连接...", ch->name, url_idx + 1, ch->url_count);
+                         "%s\n\n手动选择源 %d/%d\n正在连接...", ch->name, url_idx + 1, ch->url_count);
                 render();
                 SDL_RenderPresent(app->renderer);
 
@@ -392,7 +392,7 @@ static void handle_action(InputAction action) {
                              speed_kbps, size_bytes / 1024.0);
                     render();
                     SDL_RenderPresent(app->renderer);
-                    SDL_Delay(800);
+                    SDL_Delay(1500);
                     app_suspend_sdl();
                     bool ok = player_load(app->player, ch->urls[url_idx]);
                     app_resume_sdl();

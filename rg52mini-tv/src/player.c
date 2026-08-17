@@ -80,12 +80,14 @@ bool player_load(TVPlayer *p, const char *url) {
     // Clear previous mpv log
     system("rm -f /roms/ports/rg52mini-tv/mpv.log");
 
-    // Build mpv command - force drm video output (SDL is used by our app)
+    // Build mpv command - force drm video output, increase analyze duration, disable OSD
     char cmd[2048];
     snprintf(cmd, sizeof(cmd),
-        "mpv --fs --vo=drm --ao=alsa --volume=%d --cache=yes --cache-secs=5 "
+        "mpv --fs --vo=drm --ao=alsa --volume=%d --cache=yes --cache-secs=10 "
         "--network-timeout=20 --keep-open=always "
         "--force-window=yes --vd-lavc-threads=4 "
+        "--analyzeduration=10000000 --probesize=10000000 "
+        "--osd-level=0 "
         "--input-gamepad=yes "
         "--input-conf=/roms/ports/rg52mini-tv/mpv-input.conf "
         "--msg-level=all=v --terminal=yes \"%s\" "
