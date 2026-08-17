@@ -38,12 +38,10 @@ bool player_load(TVPlayer *p, const char *url) {
     // Clear previous mpv log
     system("rm -f /roms/ports/rg52mini-tv/mpv.log");
 
-    // Build mpv command - use gbm video output (SDL is already used by our app)
-    // --keep-open=always: keep window open on playback end/error (user must quit manually)
-    // --force-window=yes: create window even if no video (shows error messages)
+    // Build mpv command - SDL is suspended by caller, so mpv can use sdl vo
     char cmd[2048];
     snprintf(cmd, sizeof(cmd),
-        "mpv --fs --vo=gbm --ao=alsa --volume=%d --cache=yes --cache-secs=30 "
+        "mpv --fs --ao=alsa --volume=%d --cache=yes --cache-secs=30 "
         "--network-timeout=15 --keep-open=always --force-window=yes "
         "--input-gamepad=yes "
         "--input-conf=/roms/ports/rg52mini-tv/mpv-input.conf "

@@ -46,6 +46,7 @@ typedef struct {
     int search_kb_x;
     int search_kb_y;
     int search_active;
+    char font_path[256];
 } AppState;
 
 static AppState *app = NULL;
@@ -80,6 +81,7 @@ static int app_init(const char *tv_dir) {
     }
 
     ui_init(app->renderer, "assets/fonts/NotoSansCJKsc-Regular.otf");
+    strncpy(app->font_path, "assets/fonts/NotoSansCJKsc-Regular.otf", sizeof(app->font_path)-1);
     app->theme = ui_get_default_theme();
 
     input_init();
@@ -205,31 +207,99 @@ static void search_backspace(void) {
     }
 }
 
+// Suspend SDL so mpv can use SDL video output
+static void app_suspend_sdl(void) {
+    if (!app) return;
+    ui_cleanup();
+    TTF_Quit();
+    if (app->renderer) { SDL_DestroyRenderer(app->renderer); app->renderer = NULL; }
+    if (app->window) { SDL_DestroyWindow(app->window); app->window = NULL; }
+    SDL_Quit();
+}
+
+// Resume SDL after mpv exits
+static int app_resume_sdl(void) {
+    if (!app) return -1;
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK) < 0) {
+        fprintf(stderr, "SDL re-init failed: %s\n", SDL_GetError());
+        return -1;
+    }
+    app->window = SDL_CreateWindow("RG52MINI TV",
+        SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+        SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_FULLSCREEN);
+    if (!app->window) {
+        fprintf(stderr, "Window re-create failed: %s\n", SDL_GetError());
+        return -1;
+    }
+    app->renderer = SDL_CreateRenderer(app->window, -1,
+        SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    if (!app->renderer) {
+        fprintf(stderr, "Renderer re-create failed: %s\n", SDL_GetError());
+        return -1;
+    }
+    if (TTF_Init() < 0) {
+        fprintf(stderr, "TTF re-init failed: %s\n", TTF_GetError());
+        return -1;
+    }
+    ui_init(app->renderer, app->font_path);
+    app->theme = ui_get_default_theme();
+    input_init();
+    return 0;
+}
+
 static void play_selected(void) {
     if (!app || app->channels->count == 0) return;
-    Channel *ch = &app->channels->items[app->selected];
 
-    // Show loading screen
-    app->view = VIEW_LOADING;
-    app->error_msg[0] = '\0';
-    snprintf(app->loading_msg, sizeof(app->loading_msg),
-             "正在加载: %s\n\n正在连接直播源，请稍候...", ch->name);
-    render();
-    SDL_RenderPresent(app->renderer);
-    SDL_Delay(300);
+    int start_index = app->selected;
+    int max_attempts = 5;
+    bool played_ok = false;
+    int last_failed_index = -1;
 
-    // Play (blocks until mpv exits)
-    bool ok = player_load(app->player, ch->url);
+    for (int attempt = 0; attempt < max_attempts; attempt++) {
+        int idx = (start_index + attempt) % app->channels->count;
+        Channel *ch = &app->channels->items[idx];
+        app->selected = idx;
+        app->scroll = idx;
 
-    if (ok) {
-        // User watched something, return to list
-        app->view = VIEW_LIST;
-    } else {
-        // Playback failed, show error screen
+        // Show loading screen
+        app->view = VIEW_LOADING;
+        app->error_msg[0] = '\0';
+        if (attempt == 0) {
+            snprintf(app->loading_msg, sizeof(app->loading_msg),
+                     "正在加载: %s\n\n正在连接直播源，请稍候...", ch->name);
+        } else {
+            snprintf(app->loading_msg, sizeof(app->loading_msg),
+                     "上一个源无法播放\n正在尝试: %s\n\n(自动切换 %d/%d)",
+                     ch->name, attempt + 1, max_attempts);
+        }
+        render();
+        SDL_RenderPresent(app->renderer);
+        SDL_Delay(300);
+
+        // Suspend SDL so mpv can use SDL video output
+        app_suspend_sdl();
+
+        // Try to play (blocks until mpv exits)
+        bool ok = player_load(app->player, ch->url);
+
+        // Resume SDL after mpv exits
+        app_resume_sdl();
+
+        if (ok) {
+            played_ok = true;
+            break;
+        }
+        last_failed_index = idx;
+    }
+
+    app->view = VIEW_LIST;
+
+    if (!played_ok && last_failed_index >= 0) {
+        Channel *ch = &app->channels->items[last_failed_index];
         app->view = VIEW_ERROR;
         snprintf(app->error_msg, sizeof(app->error_msg),
-                 "播放失败\n\n频道: %s\n\n可能原因:\n1. 网络连接问题\n2. 直播源已失效\n3. 需要特定网络环境\n\n按任意键返回列表",
-                 ch->name);
+                 "播放失败\n\n已自动尝试 %d 个频道均无法播放\n\n最后尝试: %s\n\n按任意键返回列表",
+                 max_attempts, ch->name);
         render();
         SDL_RenderPresent(app->renderer);
     }
