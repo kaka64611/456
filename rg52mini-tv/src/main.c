@@ -160,12 +160,14 @@ static void search_filter(void) {
 }
 
 static void search_enter(void) {
+    printf("SEARCH: enter search mode\n");
     app->search_query[0] = '\0';
     app->search_kb_x = 0;
     app->search_kb_y = 0;
     app->search_active = 1;
     app->view = VIEW_SEARCH;
     search_filter();
+    printf("SEARCH: filtered %d channels\n", app->filtered->count);
 }
 
 static void search_exit(int apply) {
