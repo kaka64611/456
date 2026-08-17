@@ -296,22 +296,38 @@ static void handle_action(InputAction action) {
         case ACTION_PAGE_UP:
             if (app->view == VIEW_LIST) {
                 int visible = 11;
-                app->selected -= visible;
-                if (app->selected < 0) app->selected = 0;
-                app->scroll -= visible;
+                int total_pages = (app->channels->count + visible - 1) / visible;
+                int current_page = app->scroll / visible;
+                // Cycle: page 0 -> last page
+                if (current_page <= 0) {
+                    current_page = total_pages - 1;
+                } else {
+                    current_page--;
+                }
+                app->scroll = current_page * visible;
+                if (app->scroll >= app->channels->count) app->scroll = app->channels->count - visible;
                 if (app->scroll < 0) app->scroll = 0;
+                app->selected = app->scroll;
+                if (app->selected >= app->channels->count)
+                    app->selected = app->channels->count - 1;
             }
             break;
         case ACTION_PAGE_DOWN:
             if (app->view == VIEW_LIST) {
                 int visible = 11;
-                app->selected += visible;
+                int total_pages = (app->channels->count + visible - 1) / visible;
+                int current_page = app->scroll / visible;
+                // Cycle: last page -> page 0
+                if (current_page >= total_pages - 1) {
+                    current_page = 0;
+                } else {
+                    current_page++;
+                }
+                app->scroll = current_page * visible;
+                if (app->scroll >= app->channels->count) app->scroll = 0;
+                app->selected = app->scroll;
                 if (app->selected >= app->channels->count)
                     app->selected = app->channels->count - 1;
-                app->scroll += visible;
-                if (app->scroll + visible > app->channels->count)
-                    app->scroll = app->channels->count - visible;
-                if (app->scroll < 0) app->scroll = 0;
             }
             break;
         case ACTION_SELECT:
