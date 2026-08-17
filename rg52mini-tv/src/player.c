@@ -34,14 +34,18 @@ bool player_load(TVPlayer *p, const char *url) {
     strncpy(p->current_url, url, sizeof(p->current_url) - 1);
     p->is_playing = true;
 
-    // Build mpv command
+    // Clear previous mpv log
+    system("rm -f /roms/ports/rg52mini-tv/mpv.log");
+
+    // Build mpv command - redirect output to log for debugging
     char cmd[2048];
     snprintf(cmd, sizeof(cmd),
         "mpv --fs --ao=alsa --volume=%d --cache=yes --cache-secs=30 "
         "--network-timeout=60 --prefer-ipv4=yes --hls-bitrate=max "
         "--input-gamepad=yes "
         "--input-conf=/roms/ports/rg52mini-tv/mpv-input.conf "
-        "--msg-level=all=error --terminal=no \"%s\" 2>/dev/null",
+        "--msg-level=all=v --terminal=yes \"%s\" "
+        ">> /roms/ports/rg52mini-tv/mpv.log 2>&1",
         p->volume, url);
 
     printf("Player: launching mpv: %s\n", cmd);
