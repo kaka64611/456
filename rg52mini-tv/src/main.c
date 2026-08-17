@@ -207,13 +207,13 @@ static void play_selected(void) {
     app->view = VIEW_LOADING;
     app->error_msg[0] = '\0';
 
-    if (player_load(app->player, ch->url)) {
-        app->view = VIEW_PLAYING;
-        app->show_overlay = 1;
-        app->overlay_timer = 180; // 3 seconds
-    } else {
-        strncpy(app->error_msg, "Failed to load channel", sizeof(app->error_msg)-1);
-        app->view = VIEW_ERROR;
+    // player_load blocks until mpv exits
+    bool ok = player_load(app->player, ch->url);
+
+    // mpv exited, return to list
+    app->view = VIEW_LIST;
+    if (!ok) {
+        strncpy(app->error_msg, "播放失败，可能是网络或源的问题", sizeof(app->error_msg)-1);
     }
 }
 
@@ -394,11 +394,7 @@ static void update(void) {
         if (app->overlay_timer == 0) app->show_overlay = 0;
     }
 
-    // Check if playback ended
-    if (app->view == VIEW_PLAYING && !player_is_playing(app->player)) {
-        strncpy(app->error_msg, "Playback ended", sizeof(app->error_msg)-1);
-        app->view = VIEW_ERROR;
-    }
+    // player_load blocks, no need to check playback ended
 }
 
 static void render(void) {
