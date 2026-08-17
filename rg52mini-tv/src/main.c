@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <unistd.h>
 
 #include "input.h"
 #include "playlist.h"
@@ -215,6 +216,8 @@ static void app_suspend_sdl(void) {
     if (app->renderer) { SDL_DestroyRenderer(app->renderer); app->renderer = NULL; }
     if (app->window) { SDL_DestroyWindow(app->window); app->window = NULL; }
     SDL_Quit();
+    // Wait for video device to be fully released
+    usleep(500000);  // 0.5 seconds
 }
 
 // Resume SDL after mpv exits
