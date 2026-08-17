@@ -141,11 +141,10 @@ static void search_filter(void) {
     if (strlen(app->search_query) == 0) {
         // Empty query: show all
         for (int i = 0; i < app->all_channels->count; i++) {
-            playlist_add_channel(app->filtered,
-                app->all_channels->items[i].name,
-                app->all_channels->items[i].url,
-                app->all_channels->items[i].logo,
-                app->all_channels->items[i].group);
+            if (app->filtered->count < MAX_CHANNELS) {
+                app->filtered->items[app->filtered->count] = app->all_channels->items[i];
+                app->filtered->count++;
+            }
         }
         return;
     }
@@ -163,11 +162,10 @@ static void search_filter(void) {
         for (int j = 0; query_lower[j]; j++) query_lower[j] = tolower(query_lower[j]);
 
         if (strstr(name_lower, query_lower) != NULL) {
-            playlist_add_channel(app->filtered,
-                app->all_channels->items[i].name,
-                app->all_channels->items[i].url,
-                app->all_channels->items[i].logo,
-                app->all_channels->items[i].group);
+            if (app->filtered->count < MAX_CHANNELS) {
+                app->filtered->items[app->filtered->count] = app->all_channels->items[i];
+                app->filtered->count++;
+            }
         }
     }
 }
