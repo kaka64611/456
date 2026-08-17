@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "input.h"
 #include "playlist.h"
@@ -16,13 +17,16 @@ typedef enum {
     VIEW_LIST,
     VIEW_LOADING,
     VIEW_PLAYING,
-    VIEW_ERROR
+    VIEW_ERROR,
+    VIEW_SEARCH
 } ViewMode;
 
 typedef struct {
     SDL_Window *window;
     SDL_Renderer *renderer;
-    ChannelList *channels;
+    ChannelList *channels;       // Current displayed list
+    ChannelList *all_channels;   // Original full list
+    ChannelList *filtered;       // Search filtered list
     TVPlayer *player;
     Theme *theme;
     ViewMode view;
@@ -33,6 +37,11 @@ typedef struct {
     int overlay_timer;
     int running;
     char error_msg[512];
+    // Search
+    char search_query[64];
+    int search_kb_x;
+    int search_kb_y;
+    int search_active;
 } AppState;
 
 static AppState *app = NULL;
@@ -72,15 +81,17 @@ static int app_init(const char *tv_dir) {
     input_init();
 
     // Load channels
-    app->channels = playlist_create();
-    int count = playlist_load_directory(app->channels, tv_dir);
+    app->all_channels = playlist_create();
+    app->filtered = playlist_create();
+    int count = playlist_load_directory(app->all_channels, tv_dir);
     if (count <= 0) {
         // Try alternative paths (case-insensitive fallback)
-        count = playlist_load_directory(app->channels, "/roms/tv");
+        count = playlist_load_directory(app->all_channels, "/roms/tv");
     }
     if (count <= 0) {
-        count = playlist_load_directory(app->channels, "/roms/TV");
+        count = playlist_load_directory(app->all_channels, "/roms/TV");
     }
+    app->channels = app->all_channels;
     printf("Loaded %d channels total\n", app->channels->count);
 
     // Init player
@@ -110,6 +121,84 @@ static void app_cleanup(void) {
     app = NULL;
 }
 
+static void search_filter(void) {
+    if (!app->filtered) return;
+    playlist_clear(app->filtered);
+
+    if (strlen(app->search_query) == 0) {
+        // Empty query: show all
+        for (int i = 0; i < app->all_channels->count; i++) {
+            playlist_add_channel(app->filtered,
+                app->all_channels->items[i].name,
+                app->all_channels->items[i].url,
+                app->all_channels->items[i].logo,
+                app->all_channels->items[i].group);
+        }
+        return;
+    }
+
+    // Case-insensitive substring match
+    for (int i = 0; i < app->all_channels->count; i++) {
+        char name_lower[MAX_NAME_LEN];
+        char query_lower[64];
+        strncpy(name_lower, app->all_channels->items[i].name, MAX_NAME_LEN-1);
+        name_lower[MAX_NAME_LEN-1] = '\0';
+        strncpy(query_lower, app->search_query, 63);
+        query_lower[63] = '\0';
+
+        for (int j = 0; name_lower[j]; j++) name_lower[j] = tolower(name_lower[j]);
+        for (int j = 0; query_lower[j]; j++) query_lower[j] = tolower(query_lower[j]);
+
+        if (strstr(name_lower, query_lower) != NULL) {
+            playlist_add_channel(app->filtered,
+                app->all_channels->items[i].name,
+                app->all_channels->items[i].url,
+                app->all_channels->items[i].logo,
+                app->all_channels->items[i].group);
+        }
+    }
+}
+
+static void search_enter(void) {
+    app->search_query[0] = '\0';
+    app->search_kb_x = 0;
+    app->search_kb_y = 0;
+    app->search_active = 1;
+    app->view = VIEW_SEARCH;
+    search_filter();
+}
+
+static void search_exit(int apply) {
+    app->search_active = 0;
+    if (apply && app->filtered->count > 0) {
+        // Use filtered list
+        app->channels = app->filtered;
+    } else {
+        // Restore full list
+        app->channels = app->all_channels;
+    }
+    app->selected = 0;
+    app->scroll = 0;
+    app->view = VIEW_LIST;
+}
+
+static void search_input_char(char c) {
+    int len = strlen(app->search_query);
+    if (len < 62) {
+        app->search_query[len] = c;
+        app->search_query[len+1] = '\0';
+        search_filter();
+    }
+}
+
+static void search_backspace(void) {
+    int len = strlen(app->search_query);
+    if (len > 0) {
+        app->search_query[len-1] = '\0';
+        search_filter();
+    }
+}
+
 static void play_selected(void) {
     if (!app || app->channels->count == 0) return;
     Channel *ch = &app->channels->items[app->selected];
@@ -127,6 +216,62 @@ static void play_selected(void) {
 }
 
 static void handle_action(InputAction action) {
+    // Search mode handling (priority)
+    if (app->view == VIEW_SEARCH) {
+        static const int kb_row_lens[] = {13, 13, 10, 4};
+        switch (action) {
+            case ACTION_UP:
+                if (app->search_kb_y > 0) {
+                    app->search_kb_y--;
+                    if (app->search_kb_x >= kb_row_lens[app->search_kb_y])
+                        app->search_kb_x = kb_row_lens[app->search_kb_y] - 1;
+                }
+                return;
+            case ACTION_DOWN:
+                if (app->search_kb_y < 3) {
+                    app->search_kb_y++;
+                    if (app->search_kb_x >= kb_row_lens[app->search_kb_y])
+                        app->search_kb_x = kb_row_lens[app->search_kb_y] - 1;
+                }
+                return;
+            case ACTION_PAGE_UP: // Left
+                if (app->search_kb_x > 0) app->search_kb_x--;
+                return;
+            case ACTION_PAGE_DOWN: // Right
+                if (app->search_kb_x < kb_row_lens[app->search_kb_y] - 1) app->search_kb_x++;
+                return;
+            case ACTION_SELECT: { // A = input
+                if (app->search_kb_y < 2) {
+                    // Letters
+                    const char *row = (app->search_kb_y == 0) ? "ABCDEFGHIJKLM" : "NOPQRSTUVWXYZ";
+                    search_input_char(row[app->search_kb_x]);
+                } else if (app->search_kb_y == 2) {
+                    // Numbers
+                    const char *row = "0123456789";
+                    search_input_char(row[app->search_kb_x]);
+                } else {
+                    // Special keys row 3: 0=backspace, 1=space, 2=clear, 3=confirm
+                    if (app->search_kb_x == 0) search_backspace();
+                    else if (app->search_kb_x == 1) search_input_char(' ');
+                    else if (app->search_kb_x == 2) { app->search_query[0] = '\0'; search_filter(); }
+                    else if (app->search_kb_x == 3) { search_exit(1); }
+                }
+                return;
+            }
+            case ACTION_BACK: // B = backspace
+                search_backspace();
+                return;
+            case ACTION_MENU: // X = exit search without apply
+                search_exit(0);
+                return;
+            case ACTION_TOGGLE_PANEL: // Start = confirm search
+                search_exit(1);
+                return;
+            default:
+                return;
+        }
+    }
+
     switch (action) {
         case ACTION_UP:
             if (app->view == VIEW_LIST) {
@@ -226,6 +371,11 @@ static void handle_action(InputAction action) {
                 app->overlay_timer = app->show_overlay ? 180 : 0;
             }
             break;
+        case ACTION_MENU:
+            if (app->view == VIEW_LIST) {
+                search_enter();
+            }
+            break;
         case ACTION_QUIT:
             app->running = 0;
             break;
@@ -270,6 +420,11 @@ static void render(void) {
             break;
         case VIEW_ERROR:
             ui_draw_error(app->renderer, app->error_msg, app->theme);
+            break;
+        case VIEW_SEARCH:
+            ui_draw_search(app->renderer, app->search_query,
+                app->search_kb_x, app->search_kb_y,
+                app->filtered->count, app->theme);
             break;
     }
 

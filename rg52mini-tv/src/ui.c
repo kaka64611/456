@@ -109,7 +109,7 @@ void ui_draw_channel_list(SDL_Renderer *r, ChannelList *pl, int selected, int sc
     }
 
     // Footer hint
-    render_text(r, font_small, "A:播放 B:返回 上下:选择 左右:翻页 L1/R1:换台 L2/R2:音量 Start:列表 Sel+Start:退出",
+    render_text(r, font_small, "A:播放 B:返回 X:搜索 上下:选择 左右:翻页 L1/R1:换台 L2/R2:音量 Sel+Start:退出",
                 40, 680, dim);
 }
 
@@ -156,4 +156,82 @@ void ui_draw_error(SDL_Renderer *r, const char *text, Theme *t) {
         render_text_centered(r, font_medium, text, 640, 340, text_color);
     }
     render_text_centered(r, font_small, "按B键返回频道列表", 640, 420, text_color);
+}
+
+// Keyboard layout: 4 rows
+static const char *kb_rows[] = {
+    "ABCDEFGHIJKLM",
+    "NOPQRSTUVWXYZ",
+    "0123456789",
+    "←  清除  确认"
+};
+static const int kb_row_lens[] = {13, 13, 10, 4};
+
+void ui_draw_search(SDL_Renderer *r, const char *query, int kb_x, int kb_y, int match_count, Theme *t) {
+    SDL_SetRenderDrawColor(r, t->bg.r, t->bg.g, t->bg.b, 255);
+    SDL_RenderClear(r);
+
+    SDL_Color text_color = {t->text.r, t->text.g, t->text.b, 255};
+    SDL_Color accent = {t->accent.r, t->accent.g, t->accent.b, 255};
+    SDL_Color dim = {t->dim.r, t->dim.g, t->dim.b, 255};
+
+    // Title
+    render_text(r, font_large, "搜索频道", 40, 30, accent);
+
+    // Search box
+    SDL_SetRenderDrawColor(r, t->panel.r, t->panel.g, t->panel.b, 255);
+    SDL_Rect box = {40, 90, 1200, 60};
+    SDL_RenderFillRect(r, &box);
+    SDL_SetRenderDrawColor(r, t->accent.r, t->accent.g, t->accent.b, 255);
+    SDL_RenderDrawRect(r, &box);
+
+    char display[128];
+    snprintf(display, sizeof(display), "%s_", query ? query : "");
+    render_text(r, font_medium, display, 60, 105, text_color);
+
+    // Match count
+    char match_str[64];
+    snprintf(match_str, sizeof(match_str), "匹配: %d 个频道", match_count);
+    render_text(r, font_small, match_str, 1100, 105, dim);
+
+    // Keyboard
+    int kb_start_y = 200;
+    int key_w = 80;
+    int key_h = 60;
+    int key_gap = 8;
+
+    for (int row = 0; row < 4; row++) {
+        int row_len = kb_row_lens[row];
+        int row_width = row_len * key_w + (row_len - 1) * key_gap;
+        int start_x = (1280 - row_width) / 2;
+
+        for (int col = 0; col < row_len; col++) {
+            int x = start_x + col * (key_w + key_gap);
+            int y = kb_start_y + row * (key_h + key_gap);
+
+            int is_selected = (row == kb_y && col == kb_x);
+
+            if (is_selected) {
+                SDL_SetRenderDrawColor(r, t->accent.r, t->accent.g, t->accent.b, 255);
+            } else {
+                SDL_SetRenderDrawColor(r, t->panel.r, t->panel.g, t->panel.b, 255);
+            }
+            SDL_Rect key_rect = {x, y, key_w, key_h};
+            SDL_RenderFillRect(r, &key_rect);
+
+            char key_char[2] = {kb_rows[row][col], '\0'};
+            // Handle special keys in row 3
+            if (row == 3) {
+                if (col == 0) render_text_centered(r, font_medium, "←", x + key_w/2, y + 15, is_selected ? (SDL_Color){0,0,0,255} : text_color);
+                else if (col == 1) render_text_centered(r, font_small, "空格", x + key_w/2, y + 20, is_selected ? (SDL_Color){0,0,0,255} : text_color);
+                else if (col == 2) render_text_centered(r, font_small, "清除", x + key_w/2, y + 20, is_selected ? (SDL_Color){0,0,0,255} : text_color);
+                else if (col == 3) render_text_centered(r, font_small, "确认", x + key_w/2, y + 20, is_selected ? (SDL_Color){0,0,0,255} : text_color);
+            } else {
+                render_text_centered(r, font_medium, key_char, x + key_w/2, y + 15, is_selected ? (SDL_Color){0,0,0,255} : text_color);
+            }
+        }
+    }
+
+    // Footer hints
+    render_text(r, font_small, "方向键:移动光标  A:输入  B:删除  X:退出  Start:确认搜索", 40, 680, dim);
 }
