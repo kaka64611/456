@@ -22,7 +22,8 @@ typedef enum {
     VIEW_LOADING,
     VIEW_PLAYING,
     VIEW_ERROR,
-    VIEW_SEARCH
+    VIEW_SEARCH,
+    VIEW_SOURCE_SELECT
 } ViewMode;
 
 typedef struct {
@@ -47,6 +48,7 @@ typedef struct {
     int search_kb_x;
     int search_kb_y;
     int search_active;
+    int source_select_index;
     char font_path[256];
 } AppState;
 
@@ -100,6 +102,9 @@ static int app_init(const char *tv_dir) {
     }
     app->channels = app->all_channels;
     printf("Loaded %d channels total\n", app->channels->count);
+
+    // Load source preferences
+    playlist_load_preferences(app->all_channels, "/roms/ports/rg52mini-tv/source_prefs.txt");
 
     // Init player
     app->player = player_create();
@@ -254,64 +259,138 @@ static void play_selected(void) {
     if (!app || app->channels->count == 0) return;
 
     int start_index = app->selected;
-    int max_attempts = 5;
+    int max_channels = 3;  // Try up to 3 channels
     bool played_ok = false;
     int last_failed_index = -1;
+    int successful_url_index = -1;
+    int successful_channel_index = -1;
 
-    for (int attempt = 0; attempt < max_attempts; attempt++) {
-        int idx = (start_index + attempt) % app->channels->count;
+    for (int ch_attempt = 0; ch_attempt < max_channels; ch_attempt++) {
+        int idx = (start_index + ch_attempt) % app->channels->count;
         Channel *ch = &app->channels->items[idx];
         app->selected = idx;
         app->scroll = idx;
 
-        // Show loading screen
-        app->view = VIEW_LOADING;
-        app->error_msg[0] = '\0';
-        if (attempt == 0) {
-            snprintf(app->loading_msg, sizeof(app->loading_msg),
-                     "正在加载: %s\n\n正在连接直播源，请稍候...", ch->name);
-        } else {
-            snprintf(app->loading_msg, sizeof(app->loading_msg),
-                     "上一个源无法播放\n正在尝试: %s\n\n(自动切换 %d/%d)",
-                     ch->name, attempt + 1, max_attempts);
+        // Try each URL for this channel
+        for (int url_idx = 0; url_idx < ch->url_count; url_idx++) {
+            // Determine which URL to try: preferred first, then others
+            int try_url;
+            if (url_idx == 0 && ch->preferred_url >= 0) {
+                try_url = ch->preferred_url;
+            } else if (ch->preferred_url >= 0) {
+                // Skip preferred URL on subsequent iterations
+                try_url = (url_idx >= ch->preferred_url) ? url_idx : url_idx - 1;
+                if (try_url == ch->preferred_url) try_url++;
+                if (try_url >= ch->url_count) break;
+            } else {
+                try_url = url_idx;
+            }
+
+            // Show loading screen
+            app->view = VIEW_LOADING;
+            app->error_msg[0] = '\0';
+            if (ch_attempt == 0 && url_idx == 0) {
+                snprintf(app->loading_msg, sizeof(app->loading_msg),
+                         "正在加载: %s\n\n源 %d/%d\n正在连接，请稍候...",
+                         ch->name, try_url + 1, ch->url_count);
+            } else {
+                snprintf(app->loading_msg, sizeof(app->loading_msg),
+                         "切换源: %s\n\n源 %d/%d\n正在连接，请稍候...",
+                         ch->name, try_url + 1, ch->url_count);
+            }
+            render();
+            SDL_RenderPresent(app->renderer);
+            SDL_Delay(300);
+
+            // Suspend SDL so mpv can use SDL video output
+            app_suspend_sdl();
+
+            // Try to play
+            bool ok = player_load(app->player, ch->urls[try_url]);
+
+            // Resume SDL after mpv exits
+            app_resume_sdl();
+
+            if (ok) {
+                played_ok = true;
+                successful_url_index = try_url;
+                successful_channel_index = idx;
+                break;
+            }
+            last_failed_index = idx;
         }
-        render();
-        SDL_RenderPresent(app->renderer);
-        SDL_Delay(300);
 
-        // Suspend SDL so mpv can use SDL video output
-        app_suspend_sdl();
-
-        // Try to play (blocks until mpv exits)
-        bool ok = player_load(app->player, ch->url);
-
-        // Resume SDL after mpv exits
-        app_resume_sdl();
-
-        if (ok) {
-            played_ok = true;
-            break;
-        }
-        last_failed_index = idx;
+        if (played_ok) break;
     }
 
     app->view = VIEW_LIST;
 
-    if (!played_ok && last_failed_index >= 0) {
+    if (played_ok && successful_channel_index >= 0) {
+        // Save preferred URL for this channel
+        Channel *ch = &app->channels->items[successful_channel_index];
+        ch->preferred_url = successful_url_index;
+        playlist_save_preferences(app->all_channels, "/roms/ports/rg52mini-tv/source_prefs.txt");
+        printf("Saved preferred source %d for channel %s\n", successful_url_index, ch->name);
+    } else if (last_failed_index >= 0) {
         Channel *ch = &app->channels->items[last_failed_index];
         app->view = VIEW_ERROR;
         snprintf(app->error_msg, sizeof(app->error_msg),
-                 "播放失败\n\n已自动尝试 %d 个频道均无法播放\n\n最后尝试: %s\n\n按任意键返回列表",
-                 max_attempts, ch->name);
+                 "播放失败\n\n频道: %s\n共 %d 个源均无法播放\n\n按任意键返回列表\n按Y键手动选择源",
+                 ch->name, ch->url_count);
         render();
         SDL_RenderPresent(app->renderer);
     }
 }
 
 static void handle_action(InputAction action) {
+    // Source select mode handling
+    if (app->view == VIEW_SOURCE_SELECT) {
+        Channel *ch = &app->channels->items[app->selected];
+        switch (action) {
+            case ACTION_UP:
+                if (app->source_select_index > 0) app->source_select_index--;
+                break;
+            case ACTION_DOWN:
+                if (app->source_select_index < ch->url_count - 1) app->source_select_index++;
+                break;
+            case ACTION_SELECT:
+            case ACTION_MENU: {
+                // Play selected source
+                int url_idx = app->source_select_index;
+                app->view = VIEW_LOADING;
+                snprintf(app->loading_msg, sizeof(app->loading_msg),
+                         "正在加载: %s\n\n手动选择源 %d/%d", ch->name, url_idx + 1, ch->url_count);
+                render();
+                SDL_RenderPresent(app->renderer);
+                SDL_Delay(300);
+                app_suspend_sdl();
+                bool ok = player_load(app->player, ch->urls[url_idx]);
+                app_resume_sdl();
+                if (ok) {
+                    ch->preferred_url = url_idx;
+                    playlist_save_preferences(app->all_channels, "/roms/ports/rg52mini-tv/source_prefs.txt");
+                }
+                app->view = VIEW_LIST;
+                break;
+            }
+            case ACTION_BACK:
+                app->view = VIEW_LIST;
+                break;
+            default:
+                break;
+        }
+        return;
+    }
+
     // Error screen: any key returns to list
     if (app->view == VIEW_ERROR) {
-        app->view = VIEW_LIST;
+        if (action == ACTION_INFO) {
+            // Y key: go to source select
+            app->view = VIEW_SOURCE_SELECT;
+            app->source_select_index = 0;
+        } else {
+            app->view = VIEW_LIST;
+        }
         return;
     }
 
@@ -486,6 +565,15 @@ static void handle_action(InputAction action) {
                 search_enter();
             }
             break;
+        case ACTION_INFO:
+            if (app->view == VIEW_LIST) {
+                Channel *ch = &app->channels->items[app->selected];
+                if (ch->url_count > 1) {
+                    app->view = VIEW_SOURCE_SELECT;
+                    app->source_select_index = (ch->preferred_url >= 0) ? ch->preferred_url : 0;
+                }
+            }
+            break;
         case ACTION_QUIT:
             app->running = 0;
             break;
@@ -531,6 +619,11 @@ static void render(void) {
             ui_draw_search(app->renderer, app->search_query,
                 app->search_kb_x, app->search_kb_y,
                 app->filtered->count, app->theme);
+            break;
+        case VIEW_SOURCE_SELECT:
+            ui_draw_source_select(app->renderer,
+                &app->channels->items[app->selected],
+                app->source_select_index, app->theme);
             break;
     }
 

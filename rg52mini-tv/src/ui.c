@@ -253,3 +253,59 @@ void ui_draw_search(SDL_Renderer *r, const char *query, int kb_x, int kb_y, int 
     // Footer hints
     render_text(r, font_small, "方向键:移动光标  A:输入  B:删除  X:退出  Start:确认搜索", 40, 680, dim);
 }
+
+void ui_draw_source_select(SDL_Renderer *r, Channel *ch, int selected, Theme *t) {
+    SDL_SetRenderDrawColor(r, t->bg.r, t->bg.g, t->bg.b, 255);
+    SDL_RenderClear(r);
+
+    // Title
+    SDL_Color accent = {t->accent.r, t->accent.g, t->accent.b, 255};
+    SDL_Color text_color = {t->text.r, t->text.g, t->text.b, 255};
+    SDL_Color dim = {t->dim.r, t->dim.g, t->dim.b, 255};
+
+    char title[256];
+    snprintf(title, sizeof(title), "选择直播源 - %s", ch->name);
+    render_text_centered(r, font_large, title, 640, 40, accent);
+
+    char info[128];
+    snprintf(info, sizeof(info), "共 %d 个源", ch->url_count);
+    render_text_centered(r, font_medium, info, 640, 90, dim);
+
+    // Source list
+    int visible = 8;
+    int start = 0;
+    if (selected >= visible) start = selected - visible + 1;
+    int end = start + visible;
+    if (end > ch->url_count) end = ch->url_count;
+
+    for (int i = start; i < end; i++) {
+        int y = 140 + (i - start) * 55;
+        bool is_selected = (i == selected);
+        bool is_preferred = (i == ch->preferred_url);
+
+        // Background
+        if (is_selected) {
+            SDL_SetRenderDrawColor(r, t->selected.r, t->selected.g, t->selected.b, 255);
+        } else {
+            SDL_SetRenderDrawColor(r, t->panel.r, t->panel.g, t->panel.b, 255);
+        }
+        SDL_Rect rect = {60, y, 1160, 48};
+        SDL_RenderFillRect(r, &rect);
+
+        // Source number and URL
+        char line[1100];
+        const char *url = ch->urls[i];
+        // Truncate URL for display
+        char url_display[256];
+        if (strlen(url) > 80) {
+            snprintf(url_display, sizeof(url_display), "%.77s...", url);
+        } else {
+            strncpy(url_display, url, sizeof(url_display));
+        }
+        snprintf(line, sizeof(line), "%s源 %d: %s", is_preferred ? "★ " : "", i + 1, url_display);
+        render_text(r, font_small, line, 80, y + 14, is_selected ? (SDL_Color){255,255,255,255} : text_color);
+    }
+
+    // Footer hints
+    render_text_centered(r, font_small, "方向键:选择源  A/X:播放选中源  B:返回列表  ★=记忆的可用源", 640, 680, dim);
+}

@@ -26,6 +26,7 @@ void ui_draw_playing_overlay(SDL_Renderer *r, Channel *ch, int volume, Theme *t)
 void ui_draw_loading(SDL_Renderer *r, const char *text, Theme *t);
 void ui_draw_error(SDL_Renderer *r, const char *text, Theme *t);
 void ui_draw_search(SDL_Renderer *r, const char *query, int kb_x, int kb_y, int match_count, Theme *t);
+void ui_draw_source_select(SDL_Renderer *r, Channel *ch, int selected, Theme *t);
 Theme *ui_get_default_theme(void);
 
 #endif

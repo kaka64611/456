@@ -19,12 +19,50 @@ void playlist_clear(ChannelList *pl) {
     pl->current_index = 0;
 }
 
+int playlist_find_channel(ChannelList *pl, const char *name) {
+    if (!pl || !name) return -1;
+    for (int i = 0; i < pl->count; i++) {
+        if (strcmp(pl->items[i].name, name) == 0) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+int playlist_add_url_to_channel(ChannelList *pl, const char *name, const char *url) {
+    if (!pl || !name || !url) return -1;
+    int idx = playlist_find_channel(pl, name);
+    if (idx < 0) return -1;
+    Channel *ch = &pl->items[idx];
+    if (ch->url_count >= MAX_URLS_PER_CHANNEL) return -1;
+    // Check for duplicate URL
+    for (int i = 0; i < ch->url_count; i++) {
+        if (strcmp(ch->urls[i], url) == 0) return 0;
+    }
+    strncpy(ch->urls[ch->url_count], url, MAX_URL_LEN - 1);
+    ch->urls[ch->url_count][MAX_URL_LEN - 1] = '\0';
+    ch->url_count++;
+    return 0;
+}
+
 int playlist_add_channel(ChannelList *pl, const char *name, const char *url,
                          const char *logo, const char *group) {
     if (!pl || pl->count >= MAX_CHANNELS) return -1;
+
+    // Check if channel with same name already exists
+    int idx = playlist_find_channel(pl, name);
+    if (idx >= 0) {
+        // Add URL to existing channel
+        playlist_add_url_to_channel(pl, name, url);
+        return 0;
+    }
+
     Channel *ch = &pl->items[pl->count];
+    memset(ch, 0, sizeof(Channel));
     strncpy(ch->name, name ? name : "Unknown", MAX_NAME_LEN - 1);
-    strncpy(ch->url, url ? url : "", MAX_URL_LEN - 1);
+    strncpy(ch->urls[0], url ? url : "", MAX_URL_LEN - 1);
+    ch->url_count = 1;
+    ch->preferred_url = -1;
     strncpy(ch->logo, logo ? logo : "", MAX_URL_LEN - 1);
     strncpy(ch->group, group ? group : "", MAX_NAME_LEN - 1);
     pl->count++;
@@ -133,7 +171,7 @@ int playlist_load_m3u(ChannelList *pl, const char *filepath) {
     }
 
     fclose(f);
-    printf("Loaded %d channels from %s\n", count, filepath);
+    printf("Loaded %d entries from %s (channels: %d)\n", count, filepath, pl->count);
     return count;
 }
 
@@ -163,6 +201,48 @@ int playlist_load_directory(ChannelList *pl, const char *dirpath) {
     }
 
     closedir(dir);
-    printf("Total channels loaded: %d\n", total);
+    printf("Total entries loaded: %d, unique channels: %d\n", total, pl->count);
     return total;
+}
+
+void playlist_save_preferences(ChannelList *pl, const char *filepath) {
+    if (!pl || !filepath) return;
+    FILE *f = fopen(filepath, "w");
+    if (!f) return;
+    for (int i = 0; i < pl->count; i++) {
+        if (pl->items[i].preferred_url >= 0) {
+            fprintf(f, "%s|%d\n", pl->items[i].name, pl->items[i].preferred_url);
+        }
+    }
+    fclose(f);
+    printf("Saved preferences for %d channels\n", pl->count);
+}
+
+void playlist_load_preferences(ChannelList *pl, const char *filepath) {
+    if (!pl || !filepath) return;
+    FILE *f = fopen(filepath, "r");
+    if (!f) {
+        printf("No preferences file found\n");
+        return;
+    }
+    char line[512];
+    int loaded = 0;
+    while (fgets(line, sizeof(line), f)) {
+        int len = strlen(line);
+        while (len > 0 && (line[len-1] == '\n' || line[len-1] == '\r')) {
+            line[--len] = '\0';
+        }
+        char *sep = strchr(line, '|');
+        if (sep) {
+            *sep = '\0';
+            int idx = atoi(sep + 1);
+            int ch_idx = playlist_find_channel(pl, line);
+            if (ch_idx >= 0 && idx >= 0 && idx < pl->items[ch_idx].url_count) {
+                pl->items[ch_idx].preferred_url = idx;
+                loaded++;
+            }
+        }
+    }
+    fclose(f);
+    printf("Loaded preferences for %d channels\n", loaded);
 }
