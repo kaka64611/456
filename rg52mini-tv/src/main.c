@@ -105,6 +105,7 @@ static int app_init(const char *tv_dir) {
 
     // Load source preferences
     playlist_load_preferences(app->all_channels, "/roms/ports/rg52mini-tv/source_prefs.txt");
+    printf("Source preferences loaded\n");
 
     // Init player
     app->player = player_create();
