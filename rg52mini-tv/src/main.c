@@ -259,6 +259,12 @@ static void play_selected(void) {
 }
 
 static void handle_action(InputAction action) {
+    // Error screen: any key returns to list
+    if (app->view == VIEW_ERROR) {
+        app->view = VIEW_LIST;
+        return;
+    }
+
     // Search mode handling (priority)
     if (app->view == VIEW_SEARCH) {
         static const int kb_row_lens[] = {13, 13, 10, 4};

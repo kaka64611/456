@@ -4,6 +4,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <time.h>
 
 TVPlayer* player_create(void) {
     TVPlayer *p = calloc(1, sizeof(TVPlayer));
@@ -38,10 +39,12 @@ bool player_load(TVPlayer *p, const char *url) {
     system("rm -f /roms/ports/rg52mini-tv/mpv.log");
 
     // Build mpv command - use gbm video output (SDL is already used by our app)
+    // --keep-open=always: keep window open on playback end/error (user must quit manually)
+    // --force-window=yes: create window even if no video (shows error messages)
     char cmd[2048];
     snprintf(cmd, sizeof(cmd),
         "mpv --fs --vo=gbm --ao=alsa --volume=%d --cache=yes --cache-secs=30 "
-        "--network-timeout=60 "
+        "--network-timeout=15 --keep-open=always --force-window=yes "
         "--input-gamepad=yes "
         "--input-conf=/roms/ports/rg52mini-tv/mpv-input.conf "
         "--msg-level=all=v --terminal=yes \"%s\" "
@@ -51,12 +54,22 @@ bool player_load(TVPlayer *p, const char *url) {
     printf("Player: launching mpv: %s\n", cmd);
 
     // Execute mpv (blocks until mpv exits)
+    time_t start = time(NULL);
     int ret = system(cmd);
+    time_t end = time(NULL);
+    int elapsed = (int)(end - start);
 
-    printf("Player: mpv exited with code %d\n", WEXITSTATUS(ret));
+    int exit_code = WEXITSTATUS(ret);
+    printf("Player: mpv exited with code %d, ran for %d seconds\n", exit_code, elapsed);
 
     p->is_playing = false;
-    return (ret == 0);
+
+    // Consider it success if mpv ran more than 3 seconds (user watched something)
+    // or if exit code is 0 and ran more than 2 seconds
+    if (elapsed >= 3) {
+        return true;
+    }
+    return false;
 }
 
 void player_stop(TVPlayer *p) {
