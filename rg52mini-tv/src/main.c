@@ -146,6 +146,27 @@ static void handle_action(InputAction action) {
                 }
             }
             break;
+        case ACTION_PAGE_UP:
+            if (app->view == VIEW_LIST) {
+                int visible = 11;
+                app->selected -= visible;
+                if (app->selected < 0) app->selected = 0;
+                app->scroll -= visible;
+                if (app->scroll < 0) app->scroll = 0;
+            }
+            break;
+        case ACTION_PAGE_DOWN:
+            if (app->view == VIEW_LIST) {
+                int visible = 11;
+                app->selected += visible;
+                if (app->selected >= app->channels->count)
+                    app->selected = app->channels->count - 1;
+                app->scroll += visible;
+                if (app->scroll + visible > app->channels->count)
+                    app->scroll = app->channels->count - visible;
+                if (app->scroll < 0) app->scroll = 0;
+            }
+            break;
         case ACTION_SELECT:
             if (app->view == VIEW_LIST) {
                 play_selected();

@@ -31,8 +31,8 @@ InputAction input_process(SDL_Event *event) {
         Uint8 btn = event->jbutton.button;
         printf("JOY button down: %d\n", btn);
         switch (btn) {
-            case 0: return ACTION_SELECT;     // A = Select/Play
-            case 1: return ACTION_BACK;       // B = Back
+            case 1: return ACTION_SELECT;     // A (BUTTON 1) = Select/Play
+            case 0: return ACTION_BACK;       // B (BUTTON 0) = Back
             case 2: return ACTION_MENU;       // X = Menu
             case 3: return ACTION_INFO;       // Y = Info
             case 4: return ACTION_PREV;       // L1 = Prev channel
@@ -45,8 +45,8 @@ InputAction input_process(SDL_Event *event) {
                 return ACTION_TOGGLE_PANEL;  // Start
             case 14: return ACTION_UP;        // D-pad Up
             case 15: return ACTION_DOWN;      // D-pad Down
-            case 16: return ACTION_VOL_DOWN;  // D-pad Left = Vol down
-            case 17: return ACTION_VOL_UP;    // D-pad Right = Vol up
+            case 16: return ACTION_PAGE_UP;   // D-pad Left = Page up
+            case 17: return ACTION_PAGE_DOWN; // D-pad Right = Page down
             default:
                 printf("JOY unhandled button: %d\n", btn);
                 return ACTION_NONE;

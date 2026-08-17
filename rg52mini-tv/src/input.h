@@ -9,6 +9,8 @@ typedef enum {
     ACTION_DOWN,
     ACTION_LEFT,
     ACTION_RIGHT,
+    ACTION_PAGE_UP,    // D-pad Left = page up
+    ACTION_PAGE_DOWN,  // D-pad Right = page down
     ACTION_SELECT,      // A = play/select
     ACTION_BACK,        // B = back
     ACTION_MENU,        // X = menu/options

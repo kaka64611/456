@@ -109,7 +109,7 @@ void ui_draw_channel_list(SDL_Renderer *r, ChannelList *pl, int selected, int sc
     }
 
     // Footer hint
-    render_text(r, font_small, "A:播放  B:返回  L1/R1:上下频道  L2/R2:音量  Start:隐藏列表  Select+Start:退出",
+    render_text(r, font_small, "A:播放 B:返回 上下:选择 左右:翻页 L1/R1:换台 L2/R2:音量 Start:列表 Sel+Start:退出",
                 40, 680, dim);
 }
 

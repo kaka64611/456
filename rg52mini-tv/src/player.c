@@ -48,19 +48,18 @@ TVPlayer* player_create(void) {
         return NULL;
     }
 
-    // Configure mpv for EmuELEC DRM/KMS environment
+    // Configure mpv - use conservative settings, let mpv auto-detect
     p->mpv_set_option_string(p->mpv, "vo", "gpu");
-    p->mpv_set_option_string(p->mpv, "gpu-context", "drm");
-    p->mpv_set_option_string(p->mpv, "hwdec", "auto");
+    p->mpv_set_option_string(p->mpv, "hwdec", "no");
     p->mpv_set_option_string(p->mpv, "ao", "alsa");
     p->mpv_set_option_string(p->mpv, "cache", "yes");
     p->mpv_set_option_string(p->mpv, "cache-secs", "10");
     p->mpv_set_option_string(p->mpv, "network-timeout", "30");
     p->mpv_set_option_string(p->mpv, "terminal", "no");
-    p->mpv_set_option_string(p->mpv, "msg-level", "all=error");
-    p->mpv_set_option_string(p->mpv, "drm-connector", "auto");
+    p->mpv_set_option_string(p->mpv, "msg-level", "all=v");
     p->mpv_set_option_string(p->mpv, "video-sync", "audio");
-    p->mpv_set_option_string(p->mpv, "audio-device", "alsa/plughw:0,0");
+    p->mpv_set_option_string(p->mpv, "untimed", "no");
+    p->mpv_set_option_string(p->mpv, "idle", "yes");
 
     if (p->mpv_initialize(p->mpv) < 0) {
         fprintf(stderr, "Failed to initialize mpv\n");
@@ -145,18 +144,30 @@ void player_poll_events(TVPlayer *p) {
 
         switch (event->event_id) {
             case MPV_EVENT_SHUTDOWN:
+                printf("MPV: SHUTDOWN\n");
                 p->is_playing = false;
                 break;
-            case MPV_EVENT_END_FILE:
+            case MPV_EVENT_END_FILE: {
+                mpv_event_end_file *ef = (mpv_event_end_file *)event->data;
+                printf("MPV: END_FILE reason=%d error=%d\n", ef ? ef->reason : -1, ef ? ef->error : 0);
                 p->is_playing = false;
                 break;
+            }
             case MPV_EVENT_IDLE:
+                printf("MPV: IDLE\n");
                 p->is_playing = false;
                 break;
             case MPV_EVENT_FILE_LOADED:
+                printf("MPV: FILE_LOADED\n");
                 p->is_playing = true;
                 break;
+            case MPV_EVENT_LOG_MESSAGE: {
+                mpv_event_log_message *msg = (mpv_event_log_message *)event->data;
+                if (msg && msg->text) printf("MPV log: %s", msg->text);
+                break;
+            }
             default:
+                printf("MPV: event %d\n", event->event_id);
                 break;
         }
     }
