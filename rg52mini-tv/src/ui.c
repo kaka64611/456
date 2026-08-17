@@ -114,7 +114,14 @@ void ui_draw_channel_list(SDL_Renderer *r, ChannelList *pl, int selected, int sc
         render_text(r, font_medium, num, 55, y + 8, dim);
 
         // Channel name
-        render_text(r, font_medium, pl->items[idx].name, 110, y + 8,
+        char name_buf[256];
+        if (pl->items[idx].url_count > 1) {
+            snprintf(name_buf, sizeof(name_buf), "%s  [%d源]", pl->items[idx].name, pl->items[idx].url_count);
+        } else {
+            strncpy(name_buf, pl->items[idx].name, sizeof(name_buf) - 1);
+            name_buf[sizeof(name_buf) - 1] = '\0';
+        }
+        render_text(r, font_medium, name_buf, 110, y + 8,
                     idx == selected ? accent : text);
 
         // Group name
@@ -124,7 +131,7 @@ void ui_draw_channel_list(SDL_Renderer *r, ChannelList *pl, int selected, int sc
     }
 
     // Footer hint
-    render_text(r, font_small, "A:播放 B:返回 X:搜索 上下:选择 左右:翻页 L1/R1:换台 L2/R2:音量 Sel+Start:退出",
+    render_text(r, font_small, "A:播放 B:返回 X:搜索 Y:选源 上下:选择 左右:翻页 L1/R1:换台 L2/R2:音量 Sel+Start:退出",
                 40, 680, dim);
 }
 
