@@ -207,52 +207,29 @@ static void search_backspace(void) {
 
 static void play_selected(void) {
     if (!app || app->channels->count == 0) return;
+    Channel *ch = &app->channels->items[app->selected];
 
-    int start_index = app->selected;
-    int max_attempts = 5;  // Try up to 5 channels
-    bool played_ok = false;
-    int last_failed_index = -1;
+    // Show loading screen
+    app->view = VIEW_LOADING;
+    app->error_msg[0] = '\0';
+    snprintf(app->loading_msg, sizeof(app->loading_msg),
+             "正在加载: %s\n\n正在连接直播源，请稍候...", ch->name);
+    render();
+    SDL_RenderPresent(app->renderer);
+    SDL_Delay(300);
 
-    for (int attempt = 0; attempt < max_attempts; attempt++) {
-        int idx = (start_index + attempt) % app->channels->count;
-        Channel *ch = &app->channels->items[idx];
-        app->selected = idx;
-        app->scroll = idx;  // Keep selection visible
+    // Play (blocks until mpv exits)
+    bool ok = player_load(app->player, ch->url);
 
-        // Show loading screen
-        app->view = VIEW_LOADING;
-        app->error_msg[0] = '\0';
-        if (attempt == 0) {
-            snprintf(app->loading_msg, sizeof(app->loading_msg),
-                     "正在加载: %s\n\n正在连接直播源，请稍候...", ch->name);
-        } else {
-            snprintf(app->loading_msg, sizeof(app->loading_msg),
-                     "上一个源无法播放\n正在尝试: %s\n\n(自动切换 %d/%d)",
-                     ch->name, attempt + 1, max_attempts);
-        }
-        render();
-        SDL_RenderPresent(app->renderer);
-        SDL_Delay(300);
-
-        // Try to play
-        bool ok = player_load(app->player, ch->url);
-
-        if (ok) {
-            played_ok = true;
-            break;
-        }
-        last_failed_index = idx;
-    }
-
-    // Return to list view
-    app->view = VIEW_LIST;
-
-    if (!played_ok && last_failed_index >= 0) {
-        Channel *ch = &app->channels->items[last_failed_index];
+    if (ok) {
+        // User watched something, return to list
+        app->view = VIEW_LIST;
+    } else {
+        // Playback failed, show error screen
         app->view = VIEW_ERROR;
         snprintf(app->error_msg, sizeof(app->error_msg),
-                 "播放失败\n\n已自动尝试 %d 个频道均无法播放\n\n最后尝试: %s\n\n可能原因:\n1. 网络连接问题\n2. 直播源已失效\n3. 需要特定网络环境\n\n按B键返回列表",
-                 max_attempts, ch->name);
+                 "播放失败\n\n频道: %s\n\n可能原因:\n1. 网络连接问题\n2. 直播源已失效\n3. 需要特定网络环境\n\n按任意键返回列表",
+                 ch->name);
         render();
         SDL_RenderPresent(app->renderer);
     }
