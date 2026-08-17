@@ -47,6 +47,21 @@ static void render_text_centered(SDL_Renderer *r, TTF_Font *font, const char *te
     SDL_DestroyTexture(tex);
 }
 
+static void render_text_multiline_centered(SDL_Renderer *r, TTF_Font *font, const char *text,
+                                            int cx, int start_y, int line_height, SDL_Color color) {
+    if (!font || !text || text[0] == '\0') return;
+    char buf[1024];
+    strncpy(buf, text, sizeof(buf)-1);
+    buf[sizeof(buf)-1] = '\0';
+    int y = start_y;
+    char *line = strtok(buf, "\n");
+    while (line) {
+        render_text_centered(r, font, line, cx, y, color);
+        y += line_height;
+        line = strtok(NULL, "\n");
+    }
+}
+
 Theme *ui_get_default_theme(void) {
     static Theme t = {
         .bg = {15, 20, 35},
@@ -142,7 +157,13 @@ void ui_draw_loading(SDL_Renderer *r, const char *text, Theme *t) {
     SDL_RenderClear(r);
 
     SDL_Color accent = {t->accent.r, t->accent.g, t->accent.b, 255};
-    render_text_centered(r, font_large, text ? text : "加载中...", 640, 340, accent);
+    SDL_Color text_color = {t->text.r, t->text.g, t->text.b, 255};
+    render_text_centered(r, font_large, "正在加载", 640, 260, accent);
+    if (text) {
+        render_text_multiline_centered(r, font_medium, text, 640, 330, 45, text_color);
+    }
+    // Loading animation dots
+    render_text_centered(r, font_small, "● ● ●", 640, 500, accent);
 }
 
 void ui_draw_error(SDL_Renderer *r, const char *text, Theme *t) {
@@ -151,11 +172,10 @@ void ui_draw_error(SDL_Renderer *r, const char *text, Theme *t) {
 
     SDL_Color red = {255, 100, 100, 255};
     SDL_Color text_color = {230, 230, 230, 255};
-    render_text_centered(r, font_large, "播放错误", 640, 280, red);
+    render_text_centered(r, font_large, "播放错误", 640, 200, red);
     if (text) {
-        render_text_centered(r, font_medium, text, 640, 340, text_color);
+        render_text_multiline_centered(r, font_medium, text, 640, 280, 42, text_color);
     }
-    render_text_centered(r, font_small, "按B键返回频道列表", 640, 420, text_color);
 }
 
 // Keyboard layout: 4 rows
