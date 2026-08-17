@@ -147,12 +147,10 @@ void player_poll_events(TVPlayer *p) {
                 printf("MPV: SHUTDOWN\n");
                 p->is_playing = false;
                 break;
-            case MPV_EVENT_END_FILE: {
-                mpv_event_end_file *ef = (mpv_event_end_file *)event->data;
-                printf("MPV: END_FILE reason=%d error=%d\n", ef ? ef->reason : -1, ef ? ef->error : 0);
+            case MPV_EVENT_END_FILE:
+                printf("MPV: END_FILE\n");
                 p->is_playing = false;
                 break;
-            }
             case MPV_EVENT_IDLE:
                 printf("MPV: IDLE\n");
                 p->is_playing = false;
@@ -161,11 +159,6 @@ void player_poll_events(TVPlayer *p) {
                 printf("MPV: FILE_LOADED\n");
                 p->is_playing = true;
                 break;
-            case MPV_EVENT_LOG_MESSAGE: {
-                mpv_event_log_message *msg = (mpv_event_log_message *)event->data;
-                if (msg && msg->text) printf("MPV log: %s", msg->text);
-                break;
-            }
             default:
                 printf("MPV: event %d\n", event->event_id);
                 break;
