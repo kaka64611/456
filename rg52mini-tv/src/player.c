@@ -38,12 +38,12 @@ bool player_load(TVPlayer *p, const char *url) {
     // Clear previous mpv log
     system("rm -f /roms/ports/rg52mini-tv/mpv.log");
 
-    // Build mpv command - SDL is suspended by caller, mpv auto-selects video output
+    // Build mpv command - use safe compatible settings
     char cmd[2048];
     snprintf(cmd, sizeof(cmd),
-        "mpv --fs --ao=alsa --volume=%d --cache=yes --cache-secs=30 "
-        "--network-timeout=15 --keep-open=always --force-window=yes "
-        "--hwdec=auto --vd-lavc-threads=4 --video-sync=audio "
+        "mpv --fs --ao=alsa --volume=%d --cache=yes --cache-secs=10 "
+        "--cache-pause=yes --network-timeout=20 --keep-open=always "
+        "--force-window=yes --vd-lavc-threads=4 "
         "--input-gamepad=yes "
         "--input-conf=/roms/ports/rg52mini-tv/mpv-input.conf "
         "--msg-level=all=v --terminal=yes \"%s\" "

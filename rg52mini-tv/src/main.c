@@ -285,21 +285,21 @@ static void play_selected(void) {
                 try_url = url_idx;
             }
 
-            // Show loading screen
+            // Show loading screen with buffer info
             app->view = VIEW_LOADING;
             app->error_msg[0] = '\0';
             if (ch_attempt == 0 && url_idx == 0) {
                 snprintf(app->loading_msg, sizeof(app->loading_msg),
-                         "正在加载: %s\n\n源 %d/%d\n正在连接，请稍候...",
+                         "正在加载: %s\n\n源 %d/%d\n正在连接直播源...\n缓冲网络数据中，请稍候...",
                          ch->name, try_url + 1, ch->url_count);
             } else {
                 snprintf(app->loading_msg, sizeof(app->loading_msg),
-                         "切换源: %s\n\n源 %d/%d\n正在连接，请稍候...",
+                         "切换源: %s\n\n源 %d/%d\n正在连接直播源...\n缓冲网络数据中，请稍候...",
                          ch->name, try_url + 1, ch->url_count);
             }
             render();
             SDL_RenderPresent(app->renderer);
-            SDL_Delay(300);
+            SDL_Delay(500);
 
             // Suspend SDL so mpv can use SDL video output
             app_suspend_sdl();
@@ -358,10 +358,10 @@ static void handle_action(InputAction action) {
                 int url_idx = app->source_select_index;
                 app->view = VIEW_LOADING;
                 snprintf(app->loading_msg, sizeof(app->loading_msg),
-                         "正在加载: %s\n\n手动选择源 %d/%d", ch->name, url_idx + 1, ch->url_count);
+                         "正在加载: %s\n\n手动选择源 %d/%d\n正在连接直播源...\n缓冲网络数据中，请稍候...", ch->name, url_idx + 1, ch->url_count);
                 render();
                 SDL_RenderPresent(app->renderer);
-                SDL_Delay(300);
+                SDL_Delay(500);
                 app_suspend_sdl();
                 bool ok = player_load(app->player, ch->urls[url_idx]);
                 app_resume_sdl();
