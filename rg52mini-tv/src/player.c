@@ -39,6 +39,8 @@ bool player_load(TVPlayer *p, const char *url) {
     snprintf(cmd, sizeof(cmd),
         "mpv --fs --ao=alsa --volume=%d --cache=yes --cache-secs=30 "
         "--network-timeout=60 --prefer-ipv4=yes --hls-bitrate=max "
+        "--input-gamepad=yes "
+        "--input-conf=/roms/ports/rg52mini-tv/mpv-input.conf "
         "--msg-level=all=error --terminal=no \"%s\" 2>/dev/null",
         p->volume, url);
 
