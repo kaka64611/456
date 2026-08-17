@@ -37,10 +37,10 @@ bool player_load(TVPlayer *p, const char *url) {
     // Clear previous mpv log
     system("rm -f /roms/ports/rg52mini-tv/mpv.log");
 
-    // Build mpv command - let mpv auto-select video output (sdl2 vo not available at runtime)
+    // Build mpv command - use gbm video output (SDL is already used by our app)
     char cmd[2048];
     snprintf(cmd, sizeof(cmd),
-        "mpv --fs --ao=alsa --volume=%d --cache=yes --cache-secs=30 "
+        "mpv --fs --vo=gbm --ao=alsa --volume=%d --cache=yes --cache-secs=30 "
         "--network-timeout=60 "
         "--input-gamepad=yes "
         "--input-conf=/roms/ports/rg52mini-tv/mpv-input.conf "
