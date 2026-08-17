@@ -80,10 +80,15 @@ bool player_load(TVPlayer *p, const char *url) {
     // Clear previous mpv log
     system("rm -f /roms/ports/rg52mini-tv/mpv.log");
 
-    // Build mpv command - use gbm video output (drm is disabled in this build)
+    // Prevent mpv from using SDL video (our app already used SDL)
+    // Let mpv auto-select gbm/wayland output
+    setenv("SDL_VIDEODRIVER", "dummy", 1);
+    setenv("EGL_PLATFORM", "gbm", 1);
+
+    // Build mpv command - auto video output, safe settings
     char cmd[2048];
     snprintf(cmd, sizeof(cmd),
-        "mpv --fs --vo=gbm --ao=alsa --volume=%d --cache=yes --cache-secs=10 "
+        "mpv --fs --ao=alsa --volume=%d --cache=yes --cache-secs=10 "
         "--network-timeout=20 --keep-open=always "
         "--force-window=yes --vd-lavc-threads=4 "
         "--osd-level=0 "
@@ -105,6 +110,10 @@ bool player_load(TVPlayer *p, const char *url) {
     printf("Player: mpv exited with code %d, ran for %d seconds\n", exit_code, elapsed);
 
     p->is_playing = false;
+
+    // Restore environment for our SDL app
+    unsetenv("SDL_VIDEODRIVER");
+    unsetenv("EGL_PLATFORM");
 
     // Consider it success if mpv ran more than 3 seconds (user watched something)
     // or if exit code is 0 and ran more than 2 seconds
