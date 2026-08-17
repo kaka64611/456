@@ -48,10 +48,9 @@ TVPlayer* player_create(void) {
         return NULL;
     }
 
-    // Configure mpv - optimized for EmuELEC DRM/KMS
-    p->mpv_set_option_string(p->mpv, "vo", "gpu");
-    p->mpv_set_option_string(p->mpv, "gpu-context", "drm");
-    p->mpv_set_option_string(p->mpv, "hwdec", "auto-safe");
+    // Configure mpv - try KMS direct rendering for EmuELEC
+    p->mpv_set_option_string(p->mpv, "vo", "kms");
+    p->mpv_set_option_string(p->mpv, "hwdec", "no");
     p->mpv_set_option_string(p->mpv, "ao", "alsa");
     p->mpv_set_option_string(p->mpv, "cache", "yes");
     p->mpv_set_option_string(p->mpv, "cache-secs", "30");
@@ -62,7 +61,6 @@ TVPlayer* player_create(void) {
     p->mpv_set_option_string(p->mpv, "idle", "yes");
     p->mpv_set_option_string(p->mpv, "prefer-ipv4", "yes");
     p->mpv_set_option_string(p->mpv, "hls-bitrate", "max");
-    p->mpv_set_option_string(p->mpv, "vd-lavc-threads", "4");
 
     if (p->mpv_initialize(p->mpv) < 0) {
         fprintf(stderr, "Failed to initialize mpv\n");
