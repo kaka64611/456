@@ -162,8 +162,6 @@ void ui_draw_loading(SDL_Renderer *r, const char *text, Theme *t) {
     if (text) {
         render_text_multiline_centered(r, font_medium, text, 640, 330, 45, text_color);
     }
-    // Loading animation dots
-    render_text_centered(r, font_small, "● ● ●", 640, 500, accent);
 }
 
 void ui_draw_error(SDL_Renderer *r, const char *text, Theme *t) {
