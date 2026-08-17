@@ -13,6 +13,9 @@
 #define SCREEN_WIDTH 1280
 #define SCREEN_HEIGHT 720
 
+// Forward declarations
+static void render(void);
+
 typedef enum {
     VIEW_LIST,
     VIEW_LOADING,
